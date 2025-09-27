@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Edit3, Trash2, Send, Calendar, Sparkles, Plus } from "lucide-react";
+import { Edit3, Trash2, Send, Calendar, Sparkles, Plus, Loader2, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useProfile } from "@/hooks/useProfile";
 import { postsApi, socialConnectionsApi } from "@/integrations/supabase/api";
@@ -11,30 +11,13 @@ import type { Database } from "@/integrations/supabase/types";
 
 type Post = Database['public']['Tables']['posts']['Row'];
 
-// Mock data for generating sample posts when none exist
-const samplePosts = [
-  {
-    content: "The intersection of AI and human creativity is where the magic happens. Instead of fearing AI, we should embrace it as a powerful tool that amplifies our unique human insights and intuition. 🤖✨ #AI #Innovation",
-    topic: "AI & Technology",
-    voice: "Professional"
-  },
-  {
-    content: "Building in public has been a game-changer for our startup. The accountability, feedback, and community support are invaluable. Here's what we learned after 30 days... 🧵 #BuildInPublic #StartupLife",
-    topic: "Startups", 
-    voice: "Friendly"
-  },
-  {
-    content: "Hot take: The best content strategy isn't about going viral—it's about consistently providing value to your specific audience. Depth over reach, every time. 📊",
-    topic: "Marketing",
-    voice: "Witty"
-  }
-];
-
 const DraftedPosts = () => {
   const { toast } = useToast();
   const { profile } = useProfile();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [articleUrl, setArticleUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile) {
@@ -48,18 +31,7 @@ const DraftedPosts = () => {
     try {
       setLoading(true);
       const draftedPosts = await postsApi.getDraftedPosts(profile.id);
-      
-      // If no posts exist, create some sample posts for demo
-      if (draftedPosts.length === 0) {
-        const createdPosts = await Promise.all(
-          samplePosts.map(sample => 
-            postsApi.createDraftPost(profile.id, sample.content)
-          )
-        );
-        setPosts(createdPosts);
-      } else {
-        setPosts(draftedPosts);
-      }
+      setPosts(draftedPosts);
     } catch (error) {
       console.error('Error loading drafted posts:', error);
       toast({
@@ -152,22 +124,32 @@ const DraftedPosts = () => {
     if (!profile) return;
 
     try {
-      // Generate a random sample post for demo
-      const randomSample = samplePosts[Math.floor(Math.random() * samplePosts.length)];
-      const newPost = await postsApi.createDraftPost(profile.id, randomSample.content);
+      setGenerating(true);
       
-      setPosts([newPost, ...posts]);
+      // Call the external API to generate new posts
+      const result = await postsApi.generateAndSavePosts(profile.id);
+      
+      // Add the new posts to the beginning of the list
+      setPosts([...result.posts, ...posts]);
       
       toast({
-        title: "New post generated!",
-        description: "A new AI-generated post has been added to your drafts.",
+        title: "New posts generated!",
+        description: `${result.posts.length} AI-generated posts have been added to your drafts.`,
       });
+
+      // If there's an article URL, you could show it in a separate toast or UI element
+      if (result.url_article) {
+        setArticleUrl(result.url_article);
+      }
     } catch (error) {
+      console.error('Error generating posts:', error);
       toast({
-        title: "Error generating post",
-        description: "Failed to generate a new post. Please try again.",
+        title: "Error generating posts",
+        description: error instanceof Error ? error.message : "Failed to generate new posts. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -222,6 +204,7 @@ const DraftedPosts = () => {
           </div>
         </div>
         <div className="text-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
           <div className="text-muted-foreground">Loading posts...</div>
         </div>
       </div>
@@ -239,9 +222,19 @@ const DraftedPosts = () => {
           variant="default" 
           className="flex items-center space-x-2"
           onClick={handleGenerateNewPost}
+          disabled={generating}
         >
-          <Plus className="h-4 w-4" />
-          <span>Generate New Post</span>
+          {generating ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Generating...</span>
+            </>
+          ) : (
+            <>
+              <Plus className="h-4 w-4" />
+              <span>Generate New Posts</span>
+            </>
+          )}
         </Button>
       </div>
 
@@ -345,10 +338,20 @@ const DraftedPosts = () => {
           <Button 
             variant="outline" 
             onClick={handleGenerateNewPost}
+            disabled={generating}
             className="flex items-center space-x-2"
           >
-            <Plus className="h-4 w-4" />
-            <span>Generate Your First Post</span>
+            {generating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Generating Your First Posts...</span>
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                <span>Generate Your First Posts</span>
+              </>
+            )}
           </Button>
         </div>
       )}
@@ -356,9 +359,35 @@ const DraftedPosts = () => {
       {/* Load More */}
       {posts.length > 0 && (
         <div className="text-center py-6">
-          <Button variant="outline" size="lg" onClick={handleGenerateNewPost}>
-            Generate More Posts
+          <Button 
+            variant="outline" 
+            size="lg" 
+            onClick={handleGenerateNewPost}
+            disabled={generating}
+          >
+            {generating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Generating More Posts...
+              </>
+            ) : (
+              'Generate More Posts'
+            )}
           </Button>
+        </div>
+      )}
+
+      {articleUrl && (
+        <div className="text-center py-6">
+          <a 
+            href={articleUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center space-x-2 text-primary hover:text-primary-dark"
+          >
+            <ExternalLink className="h-4 w-4" />
+            <span>View reference article</span>
+          </a>
         </div>
       )}
     </div>

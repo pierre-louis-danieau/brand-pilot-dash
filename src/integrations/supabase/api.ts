@@ -347,6 +347,74 @@ export const postsApi = {
     }
 
     return true;
+  },
+
+  // Generate content using external API and save to database
+  async generateAndSavePosts(profileId: string): Promise<{ posts: any[], url_article?: string }> {
+    // First get the user's profile data
+    const profile = await profileApi.getProfile(profileId);
+    if (!profile) {
+      throw new Error('Profile not found');
+    }
+
+    // Prepare the payload for the external API
+    const payload = {
+      topics_of_interest: profile.topics_of_interest || [],
+      ai_voice: profile.ai_voice || 'professional',
+      about_context: profile.about_context || '',
+      post_preference: profile.post_preferences || 'engaging'
+    };
+
+    console.log('Calling external API with payload:', payload);
+
+    try {
+      // Call the external API
+      const response = await fetch('https://backend-smqp.onrender.com/generate-content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      console.log('API Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error response:', errorText);
+        throw new Error(`External API error: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('API Response data:', result);
+      
+      if (!result.contents || !Array.isArray(result.contents)) {
+        console.error('Invalid response format:', result);
+        throw new Error('Invalid response format from external API');
+      }
+
+      // Save each generated post to the database
+      const savedPosts = await Promise.all(
+        result.contents.map(async (content: string) => {
+          return await this.createDraftPost(profileId, content, 'twitter');
+        })
+      );
+
+      return {
+        posts: savedPosts,
+        url_article: result.url_content
+      };
+    } catch (error) {
+      console.error('Full error details:', error);
+      
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          throw new Error('Failed to generate content: Network error. Please check your internet connection and try again.');
+        }
+        throw new Error(`Failed to generate content: ${error.message}`);
+      }
+      throw new Error('Failed to generate content: Unknown error');
+    }
   }
 };
 

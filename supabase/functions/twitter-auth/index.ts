@@ -426,7 +426,15 @@ Deno.serve(async (req) => {
       }
 
       const topics = profile.topics_of_interest || ['technology', 'business'];
-      const query = topics.join(' OR ');
+      
+      // Clean and format topics for Twitter search
+      const cleanTopics = topics.map((topic: string) => {
+        // Remove special characters that Twitter doesn't like and convert to lowercase
+        return topic.replace(/[&]/g, 'and').replace(/[^\w\s]/g, '').toLowerCase();
+      });
+      
+      // Create search query with proper Twitter syntax
+      const query = cleanTopics.join(' OR ');
 
       // Get Twitter connection
       const { data: connections, error: retrieveError } = await supabase
