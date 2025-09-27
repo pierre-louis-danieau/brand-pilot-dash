@@ -57,28 +57,28 @@ const AnimatedCounter = ({ end, duration, suffix = "", prefix = "" }: CounterPro
 const StatsSection = () => {
   const stats = [
     {
-      number: 95,
-      suffix: "%",
-      label: "Time Saved on Content Creation",
-      description: "Users report spending 95% less time on social media management"
+      number: 12,
+      suffix: "",
+      label: "Active Users",
+      description: "Entrepreneurs currently using BrandPilot for their social media"
     },
     {
-      number: 300,
-      suffix: "%",
-      label: "Average Engagement Increase",
-      description: "AI-optimized content performs 3x better than manual posts"
+      number: 156,
+      suffix: "",
+      label: "Posts Created",
+      description: "Total posts generated and saved as drafts by our users"
     },
     {
-      number: 24,
-      suffix: "/7",
-      label: "Automated Monitoring",
-      description: "Our AI never sleeps, constantly finding opportunities"
+      number: 8,
+      suffix: "",
+      label: "Connected Accounts",
+      description: "Twitter accounts successfully connected to the platform"
     },
     {
-      number: 10000,
-      suffix: "+",
-      label: "Posts Generated Daily",
-      description: "Helping entrepreneurs worldwide create engaging content"
+      number: 3,
+      suffix: " hrs",
+      label: "Average Time Saved",
+      description: "Per week on content creation and social media management"
     }
   ];
 
