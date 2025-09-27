@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("drafted");
+  const [comingSoonPlatform, setComingSoonPlatform] = useState<string | null>(null);
   const { isAuthenticated, loading } = useProfile();
   const navigate = useNavigate();
 
@@ -45,14 +46,38 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <DashboardNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
+      <DashboardNavigation 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab}
+        comingSoonPlatform={comingSoonPlatform}
+        setComingSoonPlatform={setComingSoonPlatform}
+      />
       
       <main className="container mx-auto px-6 py-8">
-        {activeTab === "relevant" && <RelevantPosts />}
+        {/* Only show content tabs when not on a coming soon platform */}
+        {!comingSoonPlatform && (
+          <>
+            {activeTab === "relevant" && <RelevantPosts />}
+            
+            {activeTab === "drafted" && <DraftedPostsWithTwitterCheck />}
+            
+            {activeTab === "connections" && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground mb-2">Social Connections</h2>
+                  <p className="text-muted-foreground">Connect your social media accounts to enable posting and analytics.</p>
+                </div>
+                
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  <TwitterConnection />
+                </div>
+              </div>
+            )}
+          </>
+        )}
         
-        {activeTab === "drafted" && <DraftedPostsWithTwitterCheck />}
-        
-        {activeTab === "connections" && (
+        {/* Show connections tab even for coming soon platforms */}
+        {comingSoonPlatform && activeTab === "connections" && (
           <div className="space-y-6">
             <div>
               <h2 className="text-2xl font-bold text-foreground mb-2">Social Connections</h2>

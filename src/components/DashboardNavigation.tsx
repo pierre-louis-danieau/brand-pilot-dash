@@ -11,12 +11,13 @@ import { useNavigate } from "react-router-dom";
 interface DashboardNavigationProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  comingSoonPlatform: string | null;
+  setComingSoonPlatform: (platform: string | null) => void;
 }
 
-const DashboardNavigation = ({ activeTab, setActiveTab }: DashboardNavigationProps) => {
+const DashboardNavigation = ({ activeTab, setActiveTab, comingSoonPlatform, setComingSoonPlatform }: DashboardNavigationProps) => {
   const [showSettings, setShowSettings] = useState(false);
   const [activePlatform, setActivePlatform] = useState("twitter");
-  const [comingSoonPlatform, setComingSoonPlatform] = useState<string | null>(null);
   const [userContext, setUserContext] = useState("");
   const [postPreferences, setPostPreferences] = useState("");
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
@@ -284,7 +285,7 @@ const DashboardNavigation = ({ activeTab, setActiveTab }: DashboardNavigationPro
       </nav>
 
       {/* Content Type Navigation - Only show when Twitter is active */}
-      {activePlatform === "twitter" && (
+      {activePlatform === "twitter" && !comingSoonPlatform && (
         <nav className="bg-secondary/20 border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="bg-card rounded-lg p-1 shadow-sm border">
