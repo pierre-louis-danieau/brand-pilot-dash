@@ -13,16 +13,18 @@ import { profileApi } from "@/integrations/supabase/api";
 
 interface UserOnboardingProps {
   onComplete: (profile: any) => void;
+  initialEmail?: string;
+  initialName?: string;
 }
 
-const UserOnboarding = ({ onComplete }: UserOnboardingProps) => {
+const UserOnboarding = ({ onComplete, initialEmail = "", initialName = "" }: UserOnboardingProps) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   
   // Form data
   const [formData, setFormData] = useState({
-    email: "",
-    name: "",
+    email: initialEmail,
+    name: initialName,
     topics: [] as string[],
     goal: "personal_branding",
     aiVoice: "professional",

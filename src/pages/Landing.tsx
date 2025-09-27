@@ -13,7 +13,7 @@ const Landing = () => {
     if (isAuthenticated) {
       navigate("/dashboard");
     } else {
-      navigate("/dashboard"); // This will show the login form
+      navigate("/auth");
     }
   };
 

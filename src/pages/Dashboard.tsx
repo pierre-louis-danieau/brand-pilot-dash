@@ -2,16 +2,13 @@ import { useState } from "react";
 import DashboardNavigation from "@/components/DashboardNavigation";
 import RelevantPosts from "@/components/RelevantPosts";
 import DraftedPosts from "@/components/DraftedPosts";
-import LoginForm from "@/components/LoginForm";
 import { useProfile } from "@/hooks/useProfile";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("relevant");
-  const { isAuthenticated, login, loading } = useProfile();
-
-  const handleLogin = (profile: any, userInfo: { email: string; name: string }) => {
-    login(profile, userInfo);
-  };
+  const { isAuthenticated, loading } = useProfile();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -27,7 +24,8 @@ const Dashboard = () => {
   }
 
   if (!isAuthenticated) {
-    return <LoginForm onLogin={handleLogin} />;
+    navigate("/auth");
+    return null;
   }
 
   return (
