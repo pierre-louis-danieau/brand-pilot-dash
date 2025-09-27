@@ -10,7 +10,9 @@ import { useProfile } from "@/hooks/useProfile";
 import { postsApi, socialConnectionsApi } from "@/integrations/supabase/api";
 import type { Database } from "@/integrations/supabase/types";
 
-type Post = Database['public']['Tables']['posts']['Row'];
+type Post = Database['public']['Tables']['posts']['Row'] & {
+  url?: string | null;
+};
 
 const DraftedPosts = () => {
   const { toast } = useToast();
@@ -197,6 +199,31 @@ const DraftedPosts = () => {
     return `${Math.floor(diffInHours / 24)}d ago`;
   };
 
+  // Group posts by URL
+  const groupPostsByUrl = (posts: Post[]) => {
+    const grouped = posts.reduce((acc, post) => {
+      const key = post.url || 'no-url';
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(post);
+      return acc;
+    }, {} as Record<string, Post[]>);
+    
+    return grouped;
+  };
+
+  const groupedPosts = groupPostsByUrl(posts);
+
+  const getUrlDomain = (url: string | null) => {
+    if (!url) return null;
+    try {
+      return new URL(url).hostname.replace('www.', '');
+    } catch {
+      return null;
+    }
+  };
+
   const handleSaveEdit = async () => {
     if (!editingPostId) return;
     try {
@@ -259,126 +286,159 @@ const DraftedPosts = () => {
         </Button>
       </div>
 
-      <div className="grid gap-6">
-        {posts.map((post) => (
-          <Card key={post.id} className="shadow-subtle hover:shadow-brand transition-all duration-300 border border-border/50">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary text-white text-sm font-medium">
-                      JD
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium text-foreground">Your Draft</span>
-                    <span className="text-muted-foreground text-sm">·</span>
-                    <span className="text-muted-foreground text-sm">{formatTimeAgo(post.created_at)}</span>
-                  </div>
+      <div className="space-y-8">
+        {Object.entries(groupedPosts).map(([urlKey, postsGroup]) => (
+          <div key={urlKey} className="space-y-4">
+            {/* Article Source Header */}
+            {urlKey !== 'no-url' && postsGroup[0].url && (
+              <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg border border-border/50">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <ExternalLink className="h-4 w-4" />
+                  <span>Generated from article:</span>
                 </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Badge variant="secondary" className="text-xs">
-                    {getTopicFromContent(post.content)}
-                  </Badge>
-                  <Badge className={`text-xs ${getVoiceColor(getVoiceFromProfile())}`}>
-                    {getVoiceFromProfile()}
-                  </Badge>
-                </div>
+                <a 
+                  href={postsGroup[0].url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary hover:text-primary/80 font-medium truncate flex-1"
+                >
+                  {getUrlDomain(postsGroup[0].url)}
+                </a>
+                <Badge variant="outline" className="text-xs">
+                  {postsGroup.length} posts
+                </Badge>
               </div>
-            </CardHeader>
+            )}
             
-            <CardContent className="space-y-4">
-              {editingPostId === post.id ? (
-                <Textarea 
-                  value={editingContent} 
-                  onChange={(e) => setEditingContent(e.target.value)} 
-                  className="w-full text-foreground"
-                />
-              ) : (
-                <p className="text-foreground leading-relaxed">{post.content}</p>
-              )}
-              
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  <span className="text-muted-foreground">AI Generated</span>
-                </div>
-                <span className={`text-xs ${getCharacterColor(post.content.length)}`}>
-                  {post.content.length}/280 characters
-                </span>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center justify-between pt-2 border-t border-border">
-                {editingPostId === post.id ? (
-                  <div className="flex space-x-2">
-                    <Button 
-                      size="sm" 
-                      variant="default"
-                      onClick={handleSaveEdit}
-                      className="text-xs"
-                    >
-                      <Check className="h-3 w-3 mr-1" />
-                      Save
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost"
-                      onClick={() => setEditingPostId(null)}
-                      className="text-xs text-destructive hover:text-destructive"
-                    >
-                      <X className="h-3 w-3 mr-1" />
-                      Cancel
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex space-x-2">
-                    <Button 
-                      size="sm" 
-                      variant="default"
-                      onClick={() => handlePublish(post.id)}
-                      className="text-xs"
-                    >
-                      <Send className="h-3 w-3 mr-1" />
-                      Publish
-                    </Button>
+            {/* Posts Grid */}
+            <div className="grid gap-6">
+              {postsGroup.map((post) => (
+                <Card key={post.id} className="shadow-subtle hover:shadow-brand transition-all duration-300 border border-border/50">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-primary text-white text-sm font-medium">
+                            JD
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm font-medium text-foreground">Your Draft</span>
+                          <span className="text-muted-foreground text-sm">·</span>
+                          <span className="text-muted-foreground text-sm">{formatTimeAgo(post.created_at)}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {getTopicFromContent(post.content)}
+                        </Badge>
+                        <Badge className={`text-xs ${getVoiceColor(getVoiceFromProfile())}`}>
+                          {getVoiceFromProfile()}
+                        </Badge>
+                        {post.url && (
+                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                            Article-based
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-4">
+                    {editingPostId === post.id ? (
+                      <Textarea 
+                        value={editingContent} 
+                        onChange={(e) => setEditingContent(e.target.value)} 
+                        className="w-full text-foreground"
+                      />
+                    ) : (
+                      <p className="text-foreground leading-relaxed">{post.content}</p>
+                    )}
                     
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => handleSchedule(post.id)}
-                      className="text-xs"
-                    >
-                      <Calendar className="h-3 w-3 mr-1" />
-                      Schedule
-                    </Button>
-                  </div>
-                )}
-                
-                <div className="flex space-x-2">
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    onClick={() => handleEdit(post.id)}
-                    className="text-xs"
-                  >
-                    <Edit3 className="h-3 w-3 mr-1" />
-                    Edit
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    onClick={() => handleDelete(post.id)}
-                    className="text-xs text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-3 w-3 mr-1" />
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center space-x-2">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        <span className="text-muted-foreground">AI Generated</span>
+                      </div>
+                      <span className={`text-xs ${getCharacterColor(post.content.length)}`}>
+                        {post.content.length}/280 characters
+                      </span>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-between pt-2 border-t border-border">
+                      {editingPostId === post.id ? (
+                        <div className="flex space-x-2">
+                          <Button 
+                            size="sm" 
+                            variant="default"
+                            onClick={handleSaveEdit}
+                            className="text-xs"
+                          >
+                            <Check className="h-3 w-3 mr-1" />
+                            Save
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={() => setEditingPostId(null)}
+                            className="text-xs text-destructive hover:text-destructive"
+                          >
+                            <X className="h-3 w-3 mr-1" />
+                            Cancel
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex space-x-2">
+                          <Button 
+                            size="sm" 
+                            variant="default"
+                            onClick={() => handlePublish(post.id)}
+                            className="text-xs"
+                          >
+                            <Send className="h-3 w-3 mr-1" />
+                            Publish
+                          </Button>
+                          
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleSchedule(post.id)}
+                            className="text-xs"
+                          >
+                            <Calendar className="h-3 w-3 mr-1" />
+                            Schedule
+                          </Button>
+                        </div>
+                      )}
+                      
+                      <div className="flex space-x-2">
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => handleEdit(post.id)}
+                          className="text-xs"
+                        >
+                          <Edit3 className="h-3 w-3 mr-1" />
+                          Edit
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => handleDelete(post.id)}
+                          className="text-xs text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
 
@@ -427,19 +487,6 @@ const DraftedPosts = () => {
         </div>
       )}
 
-      {articleUrl && (
-        <div className="text-center py-6">
-          <a 
-            href={articleUrl} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center space-x-2 text-primary hover:text-primary-dark"
-          >
-            <ExternalLink className="h-4 w-4" />
-            <span>View reference article</span>
-          </a>
-        </div>
-      )}
     </div>
   );
 };
