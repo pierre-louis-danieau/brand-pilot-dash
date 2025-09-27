@@ -304,17 +304,66 @@ export const socialConnectionsApi = {
       throw new Error('Profile not found');
     }
 
-    // Build search query based on user's topics of interest
+    // Get onboarding profile data for enhanced search context
+    let onboardingProfile = null;
+    if (profile.email) {
+      onboardingProfile = await onboardingProfileApi.getOnboardingProfileByEmail(profile.email);
+    }
+
+    // Build comprehensive search query using multiple data sources
+    const searchTerms: string[] = [];
+
+    // Add topics of interest from profile
     const topics = profile.topics_of_interest || [];
-    let searchQuery = '';
-    
     if (topics.length > 0) {
-      // Create a search query from topics, excluding retweets and replies
-      searchQuery = topics.map(topic => `"${topic}"`).join(' OR ') + ' -is:retweet -is:reply';
+      searchTerms.push(...topics.map(topic => `"${topic}"`));
+    }
+
+    // Add onboarding profile fields if available
+    if (onboardingProfile) {
+      if (onboardingProfile.user_type) {
+        searchTerms.push(`"${onboardingProfile.user_type}"`);
+      }
+      if (onboardingProfile.domain) {
+        searchTerms.push(`"${onboardingProfile.domain}"`);
+      }
+      if (onboardingProfile.social_media_goal) {
+        searchTerms.push(`"${onboardingProfile.social_media_goal}"`);
+      }
+      if (onboardingProfile.business_description) {
+        // Extract key terms from business description (more comprehensive extraction)
+        const businessTerms = onboardingProfile.business_description
+          .split(' ')
+          .slice(0, 15) // Take first 15 words instead of 5 for more context
+          .filter(term => term.length > 2) // Include words longer than 2 characters (instead of 3)
+          .map(term => term.replace(/[^\w\s]/g, '')) // Remove punctuation
+          .filter(term => term.length > 0) // Remove empty strings after punctuation removal
+          .map(term => `"${term}"`);
+        searchTerms.push(...businessTerms);
+      }
+    }
+
+    // Build search query with OR operators
+    let searchQuery = '';
+    if (searchTerms.length > 0) {
+      searchQuery = searchTerms.join(' OR ') + ' -is:retweet -is:reply';
     } else {
-      // Default search if no topics specified
+      // Fallback if no terms available
       searchQuery = 'technology OR innovation OR startup -is:retweet -is:reply';
     }
+
+    // Ensure query doesn't exceed Twitter's 4096 character limit
+    const maxQueryLength = 4096;
+    if (searchQuery.length > maxQueryLength) {
+      // Truncate query to fit within limit, ensuring we don't break in the middle of a term
+      const truncatedQuery = searchQuery.substring(0, maxQueryLength);
+      const lastOrIndex = truncatedQuery.lastIndexOf(' OR ');
+      searchQuery = lastOrIndex > 0 ? truncatedQuery.substring(0, lastOrIndex) : truncatedQuery;
+      searchQuery += ' -is:retweet -is:reply'; // Ensure filters are always included
+    }
+
+    console.log('Enhanced search query:', searchQuery);
+    console.log('Query length:', searchQuery.length);
 
     const { data, error } = await supabase.functions.invoke('twitter-auth', {
       body: { 

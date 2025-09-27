@@ -295,6 +295,480 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
 
+    } else if (action === 'search') {
+      // Step 5: Search for tweets using Twitter API v2
+      const { profileId, query, maxResults = 10 } = requestBody;
+
+      if (!profileId || !query) {
+        throw new Error('Profile ID and search query are required');
+      }
+
+      // Get the user's Twitter connection
+      const { data: connection, error: connectionError } = await supabase
+        .from('social_connections')
+        .select('access_token')
+        .eq('profile_id', profileId)
+        .eq('platform', 'twitter')
+        .eq('is_connected', true)
+        .single();
+
+      if (connectionError || !connection) {
+        throw new Error('Twitter account not connected or access token not found');
+      }
+
+      // Search tweets using Twitter API v2
+      const searchUrl = new URL('https://api.twitter.com/2/tweets/search/recent');
+      searchUrl.searchParams.set('query', query);
+      searchUrl.searchParams.set('max_results', Math.min(maxResults, 100).toString());
+      searchUrl.searchParams.set('tweet.fields', 'created_at,author_id,context_annotations,public_metrics');
+      searchUrl.searchParams.set('user.fields', 'name,username');
+      searchUrl.searchParams.set('expansions', 'author_id');
+
+      const searchResponse = await fetch(searchUrl.toString(), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${connection.access_token}`,
+        },
+      });
+
+      if (!searchResponse.ok) {
+        const errorText = await searchResponse.text();
+        console.error('Twitter search error:', errorText);
+        throw new Error(`Failed to search tweets: ${errorText}`);
+      }
+
+      const searchData = await searchResponse.json();
+
+      return new Response(JSON.stringify(searchData), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+
+    } else if (action === 'findAndSave') {
+      // Step 6: Find and save relevant posts to database
+      const { profileId } = requestBody;
+
+      if (!profileId) {
+        throw new Error('Profile ID is required');
+      }
+
+      // Get the user's Twitter connection
+      const { data: connection, error: connectionError } = await supabase
+        .from('social_connections')
+        .select('access_token')
+        .eq('profile_id', profileId)
+        .eq('platform', 'twitter')
+        .eq('is_connected', true)
+        .single();
+
+      if (connectionError || !connection) {
+        throw new Error('Twitter account not connected or access token not found');
+      }
+
+      // Get user profile to build search query
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email, topics_of_interest')
+        .eq('id', profileId)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error('Profile not found');
+      }
+
+      // Get onboarding profile for enhanced search
+      let onboardingProfile = null;
+      if (profile.email) {
+        const { data: onboarding } = await supabase
+          .from('onboarding_profiles')
+          .select('user_type, domain, social_media_goal, business_description')
+          .eq('email', profile.email)
+          .single();
+        onboardingProfile = onboarding;
+      }
+
+      // Build search query (same logic as in API)
+      const searchTerms = [];
+      
+      // Add topics of interest
+      const topics = profile.topics_of_interest || [];
+      if (topics.length > 0) {
+        searchTerms.push(...topics.map(topic => `"${topic}"`));
+      }
+
+      // Add onboarding profile fields
+      if (onboardingProfile) {
+        if (onboardingProfile.user_type) {
+          searchTerms.push(`"${onboardingProfile.user_type}"`);
+        }
+        if (onboardingProfile.domain) {
+          searchTerms.push(`"${onboardingProfile.domain}"`);
+        }
+        if (onboardingProfile.social_media_goal) {
+          searchTerms.push(`"${onboardingProfile.social_media_goal}"`);
+        }
+        if (onboardingProfile.business_description) {
+          const businessTerms = onboardingProfile.business_description
+            .split(' ')
+            .slice(0, 15)
+            .filter(term => term.length > 2)
+            .map(term => term.replace(/[^\w\s]/g, ''))
+            .filter(term => term.length > 0)
+            .map(term => `"${term}"`);
+          searchTerms.push(...businessTerms);
+        }
+      }
+
+      let searchQuery = '';
+      if (searchTerms.length > 0) {
+        searchQuery = searchTerms.join(' OR ') + ' -is:retweet -is:reply';
+      } else {
+        searchQuery = 'technology OR innovation OR startup -is:retweet -is:reply';
+      }
+
+      // Ensure query doesn't exceed 4096 character limit
+      if (searchQuery.length > 4096) {
+        const truncatedQuery = searchQuery.substring(0, 4096);
+        const lastOrIndex = truncatedQuery.lastIndexOf(' OR ');
+        searchQuery = lastOrIndex > 0 ? truncatedQuery.substring(0, lastOrIndex) : truncatedQuery;
+        searchQuery += ' -is:retweet -is:reply';
+      }
+
+      // Search for tweets
+      const searchUrl = new URL('https://api.twitter.com/2/tweets/search/recent');
+      searchUrl.searchParams.set('query', searchQuery);
+      searchUrl.searchParams.set('max_results', '10');
+      searchUrl.searchParams.set('tweet.fields', 'created_at,author_id,context_annotations,public_metrics');
+      searchUrl.searchParams.set('user.fields', 'name,username');
+      searchUrl.searchParams.set('expansions', 'author_id');
+
+      const searchResponse = await fetch(searchUrl.toString(), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${connection.access_token}`,
+        },
+      });
+
+      if (!searchResponse.ok) {
+        const errorText = await searchResponse.text();
+        console.error('Twitter search error:', errorText);
+        throw new Error(`Failed to search tweets: ${errorText}`);
+      }
+
+      const searchData = await searchResponse.json();
+
+      if (!searchData.data || searchData.data.length === 0) {
+        return new Response(JSON.stringify({
+          savedPosts: [],
+          newPostsCount: 0,
+          skippedPostsCount: 0,
+          message: 'No relevant posts found for your interests.'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Save posts to relevant_posts table
+      const savedPosts = [];
+      let newPostsCount = 0;
+      let skippedPostsCount = 0;
+
+      for (const tweet of searchData.data) {
+        const author = searchData.includes?.users?.find(user => user.id === tweet.author_id);
+        
+        // Check if post already exists
+        const { data: existingPost } = await supabase
+          .from('relevant_posts')
+          .select('id')
+          .eq('twitter_post_id', tweet.id)
+          .single();
+
+        if (existingPost) {
+          skippedPostsCount++;
+          continue;
+        }
+
+        // Determine topic based on content
+        let topic = 'General';
+        const content = tweet.text.toLowerCase();
+        if (content.includes('ai') || content.includes('technology')) topic = 'AI & Technology';
+        else if (content.includes('startup') || content.includes('business')) topic = 'Startups';
+        else if (content.includes('marketing') || content.includes('content')) topic = 'Marketing';
+
+        // Save to database
+        const { data: savedPost, error: saveError } = await supabase
+          .from('relevant_posts')
+          .insert({
+            profile_id: profileId,
+            twitter_post_id: tweet.id,
+            author_name: author?.name || 'Unknown',
+            author_username: author?.username || 'unknown',
+            author_id: tweet.author_id,
+            content: tweet.text,
+            twitter_url: `https://twitter.com/${author?.username}/status/${tweet.id}`,
+            created_at_twitter: tweet.created_at,
+            retweet_count: tweet.public_metrics?.retweet_count || 0,
+            like_count: tweet.public_metrics?.like_count || 0,
+            reply_count: tweet.public_metrics?.reply_count || 0,
+            quote_count: tweet.public_metrics?.quote_count || 0,
+            topic: topic,
+            context_annotations: tweet.context_annotations || []
+          })
+          .select()
+          .single();
+
+        if (!saveError && savedPost) {
+          savedPosts.push(savedPost);
+          newPostsCount++;
+        }
+      }
+
+      return new Response(JSON.stringify({
+        savedPosts,
+        newPostsCount,
+        skippedPostsCount,
+        message: newPostsCount > 0 
+          ? `Found and saved ${newPostsCount} new relevant posts!`
+          : `Found ${skippedPostsCount} posts but they were already saved.`
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+
+    } else if (action === 'generateResponse') {
+      // Step 7: Generate AI response for a relevant post
+      const { postId, profileId, tweetId } = requestBody;
+
+      if (!postId && !tweetId) {
+        throw new Error('Post ID or Tweet ID is required');
+      }
+
+      // Get the relevant post from database
+      let relevantPost;
+      if (postId) {
+        const { data: post, error: postError } = await supabase
+          .from('relevant_posts')
+          .select('*')
+          .eq('id', postId)
+          .single();
+
+        if (postError || !post) {
+          throw new Error('Relevant post not found');
+        }
+        relevantPost = post;
+      } else {
+        // If only tweetId provided, find by twitter_post_id
+        const { data: post, error: postError } = await supabase
+          .from('relevant_posts')
+          .select('*')
+          .eq('twitter_post_id', tweetId)
+          .single();
+
+        if (postError || !post) {
+          throw new Error('Relevant post not found');
+        }
+        relevantPost = post;
+      }
+
+      // Get user profile for context
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email, topics_of_interest, ai_voice, about_context')
+        .eq('id', relevantPost.profile_id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error('Profile not found');
+      }
+
+      // Get onboarding profile for additional context
+      let onboardingProfile = null;
+      if (profile.email) {
+        const { data: onboarding } = await supabase
+          .from('onboarding_profiles')
+          .select('user_type, domain, social_media_goal, business_description')
+          .eq('email', profile.email)
+          .single();
+        onboardingProfile = onboarding;
+      }
+
+      // Check for OpenAI API key
+      const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+      if (!openaiApiKey) {
+        throw new Error('OpenAI API key not configured');
+      }
+
+      // Build context for AI response
+      let userContext = `
+User Background: ${profile.about_context || 'No specific context provided'}
+Topics of Interest: ${profile.topics_of_interest?.join(', ') || 'General topics'}
+Voice: ${profile.ai_voice || 'professional'}`;
+
+      if (onboardingProfile) {
+        userContext += `
+User Type: ${onboardingProfile.user_type || 'Not specified'}
+Domain: ${onboardingProfile.domain || 'Not specified'}
+Social Media Goal: ${onboardingProfile.social_media_goal || 'Not specified'}
+Business: ${onboardingProfile.business_description || 'Not specified'}`;
+      }
+
+      const systemPrompt = `You are an expert social media engagement assistant. Generate a thoughtful, professional reply to the given tweet that:
+
+1. Is relevant and adds value to the conversation
+2. Reflects the user's expertise and interests
+3. Is engaging but not overly promotional
+4. Stays under 280 characters
+5. Uses a ${profile.ai_voice || 'professional'} tone
+
+User Context: ${userContext}
+
+Original Tweet: "${relevantPost.content}"
+
+Generate ONLY the reply text, nothing else. Make it conversational and authentic.`;
+
+      // Call OpenAI API
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openaiApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: systemPrompt
+            },
+            {
+              role: 'user',
+              content: `Generate a reply to this tweet: "${relevantPost.content}"`
+            }
+          ],
+          max_tokens: 100,
+          temperature: 0.7,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('OpenAI API error:', errorText);
+        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      let aiResponse = data.choices[0]?.message?.content?.trim();
+
+      if (!aiResponse) {
+        throw new Error('No response generated from OpenAI');
+      }
+
+      // Ensure response is under 280 characters
+      if (aiResponse.length > 280) {
+        aiResponse = aiResponse.substring(0, 277) + '...';
+      }
+
+      // Update the relevant post with the AI response
+      const { error: updateError } = await supabase
+        .from('relevant_posts')
+        .update({ ai_response: aiResponse })
+        .eq('id', relevantPost.id);
+
+      if (updateError) {
+        console.error('Error updating post with AI response:', updateError);
+      }
+
+      return new Response(JSON.stringify({ 
+        aiResponse: aiResponse,
+        characterCount: aiResponse.length
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+
+    } else if (action === 'sendReply') {
+      // Step 8: Send AI-generated reply to Twitter
+      const { postId, profileId, tweetId, replyText } = requestBody;
+
+      if (!postId && !tweetId) {
+        throw new Error('Post ID or Tweet ID is required');
+      }
+
+      // Get the relevant post from database
+      let relevantPost;
+      if (postId) {
+        const { data: post, error: postError } = await supabase
+          .from('relevant_posts')
+          .select('*')
+          .eq('id', postId)
+          .single();
+
+        if (postError || !post) {
+          throw new Error('Relevant post not found');
+        }
+        relevantPost = post;
+      } else {
+        // If only tweetId provided, find by twitter_post_id
+        const { data: post, error: postError } = await supabase
+          .from('relevant_posts')
+          .select('*')
+          .eq('twitter_post_id', tweetId)
+          .single();
+
+        if (postError || !post) {
+          throw new Error('Relevant post not found');
+        }
+        relevantPost = post;
+      }
+
+      // Get the user's Twitter connection
+      const { data: connection, error: connectionError } = await supabase
+        .from('social_connections')
+        .select('access_token')
+        .eq('profile_id', relevantPost.profile_id)
+        .eq('platform', 'twitter')
+        .eq('is_connected', true)
+        .single();
+
+      if (connectionError || !connection) {
+        throw new Error('Twitter account not connected or access token not found');
+      }
+
+      // Use the AI response from the post or the provided replyText
+      const textToReply = replyText || relevantPost.ai_response;
+      
+      if (!textToReply) {
+        throw new Error('No reply text available. Generate an AI response first.');
+      }
+
+      // Post the reply using Twitter API v2
+      const replyResponse = await fetch('https://api.twitter.com/2/tweets', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${connection.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: textToReply,
+          reply: {
+            in_reply_to_tweet_id: relevantPost.twitter_post_id
+          }
+        }),
+      });
+
+      if (!replyResponse.ok) {
+        const errorText = await replyResponse.text();
+        console.error('Twitter reply error:', errorText);
+        throw new Error(`Failed to send reply: ${errorText}`);
+      }
+
+      const replyData = await replyResponse.json();
+
+      return new Response(JSON.stringify({ 
+        success: true,
+        replyId: replyData.data?.id,
+        replyUrl: `https://twitter.com/user/status/${replyData.data?.id}`
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+
     } else {
       return new Response(JSON.stringify({ error: 'Invalid action' }), {
         status: 400,
