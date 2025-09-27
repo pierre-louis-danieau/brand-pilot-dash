@@ -4,12 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Zap, User, Target, MessageSquare, Sparkles } from "lucide-react";
+import { Zap } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { profileApi } from "@/integrations/supabase/api";
+import { onboardingApi } from "@/integrations/supabase/api";
 
 interface UserOnboardingProps {
   onComplete: (profile: any, userInfo: { email: string; name: string }) => void;
@@ -22,69 +20,65 @@ const UserOnboarding = ({ onComplete, initialEmail = "", initialName = "", onSwi
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   
-  // Form data
+  // Form data for new flow
   const [formData, setFormData] = useState({
-    email: initialEmail,
+    userType: "" as "freelancer" | "startup_founder" | "",
+    domain: "",
+    socialMediaGoal: "" as "find_clients" | "personal_branding" | "for_fund" | "",
+    businessDescription: "",
     name: initialName,
-    topics: [] as string[],
-    goal: "personal_branding",
-    aiVoice: "professional",
-    aboutContext: "",
-    postPreferences: "",
-    industryDomain: ""
+    username: "",
+    email: initialEmail,
   });
 
-  const availableTopics = [
-    "AI & Technology",
-    "Startups",
-    "Marketing",
-    "Business Strategy",
-    "Product Development",
-    "Leadership",
-    "Finance",
-    "Healthcare",
-    "Education",
-    "Design",
-    "Sales",
-    "Customer Success"
+  const freelancerDomains = [
+    "Data Scientist",
+    "Developer", 
+    "Designer",
+    "Copywriter"
   ];
 
-  const handleTopicToggle = (topic: string) => {
-    setFormData(prev => ({
-      ...prev,
-      topics: prev.topics.includes(topic)
-        ? prev.topics.filter(t => t !== topic)
-        : [...prev.topics, topic]
-    }));
-  };
+  const startupDomains = [
+    "FinTech",
+    "HealthTech", 
+    "EdTech",
+    "E-commerce",
+    "AI/ML",
+    "SaaS",
+    "Mobile Apps"
+  ];
 
   const handleNext = () => {
-    if (step === 1 && (!formData.email || !formData.name)) {
-      toast({
-        title: "Required fields missing",
-        description: "Please fill in your email and name to continue.",
-        variant: "destructive",
-      });
-      return;
+    if (step < 5) {
+      setStep(step + 1);
+    } else {
+      handleComplete();
     }
-    
-    if (step === 2 && formData.topics.length === 0) {
-      toast({
-        title: "Select at least one topic",
-        description: "Please select at least one topic of interest.",
-        variant: "destructive",
-      });
-      return;
-    }
+  };
 
-    setStep(step + 1);
+  const canProceed = () => {
+    switch (step) {
+      case 1:
+        return formData.userType !== "";
+      case 2:
+        return formData.domain !== "";
+      case 3:
+        return formData.socialMediaGoal !== "";
+      case 4:
+        return formData.businessDescription.trim() !== "";
+      case 5:
+        return formData.name.trim() !== "" && formData.email.includes("@");
+      default:
+        return false;
+    }
   };
 
   const handleComplete = async () => {
-    if (!formData.aboutContext.trim()) {
+    if (!formData.userType || !formData.domain || !formData.socialMediaGoal || 
+        !formData.businessDescription || !formData.name || !formData.email) {
       toast({
-        title: "Please tell us about yourself",
-        description: "The 'About You' section helps us create better content.",
+        title: "Please fill all required fields",
+        description: "All fields are required to complete the onboarding.",
         variant: "destructive",
       });
       return;
@@ -93,32 +87,23 @@ const UserOnboarding = ({ onComplete, initialEmail = "", initialName = "", onSwi
     try {
       setLoading(true);
       
-      // Create profile with real user data
-      const profile = await profileApi.getOrCreateProfile(formData.email);
-      
-      // Update with all the collected information
-      const updatedProfile = await profileApi.updateProfile(profile.id, {
-        topics_of_interest: formData.topics,
-        goal: formData.goal,
-        ai_voice: formData.aiVoice,
-        about_context: formData.aboutContext,
-        post_preferences: formData.postPreferences,
-        industry_domain: formData.industryDomain
-      });
-
-      // Store user info in localStorage for persistence
-      localStorage.setItem('brandpilot_user', JSON.stringify({
+      // Create onboarding profile
+      const profile = await onboardingApi.createOnboardingProfile({
         email: formData.email,
         name: formData.name,
-        profileId: updatedProfile.id
-      }));
+        username: formData.username || undefined,
+        user_type: formData.userType,
+        domain: formData.domain,
+        social_media_goal: formData.socialMediaGoal,
+        business_description: formData.businessDescription,
+      });
 
       toast({
         title: "Welcome to BrandPilot!",
-        description: "Your profile has been created successfully.",
+        description: "Your account has been set up successfully.",
       });
 
-      onComplete(updatedProfile, { email: formData.email, name: formData.name });
+      onComplete(profile, { email: formData.email, name: formData.name });
     } catch (error) {
       toast({
         title: "Error creating profile",
@@ -142,13 +127,14 @@ const UserOnboarding = ({ onComplete, initialEmail = "", initialName = "", onSwi
           </div>
           <CardTitle className="text-xl">
             {step === 1 && "Welcome! Let's get started"}
-            {step === 2 && "What topics interest you?"}
-            {step === 3 && "Set your preferences"}
+            {step === 2 && "What's your domain?"}
+            {step === 3 && "Why social media?"}
             {step === 4 && "Tell us about yourself"}
+            {step === 5 && "Complete your profile"}
           </CardTitle>
           <div className="flex justify-center mt-4">
             <div className="flex space-x-2">
-              {[1, 2, 3, 4].map((i) => (
+              {[1, 2, 3, 4, 5].map((i) => (
                 <div
                   key={i}
                   className={`h-2 w-8 rounded-full ${
@@ -163,171 +149,152 @@ const UserOnboarding = ({ onComplete, initialEmail = "", initialName = "", onSwi
         <CardContent className="space-y-6">
           {step === 1 && (
             <div className="space-y-4">
-              <div className="flex items-center space-x-2 text-muted-foreground mb-4">
-                <User className="h-4 w-4" />
-                <span className="text-sm">Basic Information</span>
-              </div>
+              <p className="text-sm text-muted-foreground text-center">
+                Tell us about yourself to personalize your experience.
+              </p>
               
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="your.email@example.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name *</Label>
-                <Input
-                  id="name"
-                  placeholder="John Doe"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="industry">Industry/Domain (Optional)</Label>
-                <Input
-                  id="industry"
-                  placeholder="e.g., Technology, Healthcare, Finance"
-                  value={formData.industryDomain}
-                  onChange={(e) => setFormData(prev => ({ ...prev, industryDomain: e.target.value }))}
-                />
-              </div>
+              <RadioGroup
+                value={formData.userType}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, userType: value as any }))}
+                className="space-y-4"
+              >
+                <div className="flex items-center space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-all">
+                  <RadioGroupItem value="freelancer" id="freelancer" />
+                  <Label htmlFor="freelancer" className="flex-1 text-left cursor-pointer">
+                    <div className="font-medium text-foreground">I'm a Freelancer</div>
+                    <div className="text-sm text-muted-foreground">Independent professional offering services</div>
+                  </Label>
+                </div>
+                
+                <div className="flex items-center space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-all">
+                  <RadioGroupItem value="startup_founder" id="startup_founder" />
+                  <Label htmlFor="startup_founder" className="flex-1 text-left cursor-pointer">
+                    <div className="font-medium text-foreground">I'm a Startup Founder</div>
+                    <div className="text-sm text-muted-foreground">Building and launching my own business</div>
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
           )}
 
           {step === 2 && (
             <div className="space-y-4">
-              <div className="flex items-center space-x-2 text-muted-foreground mb-4">
-                <Target className="h-4 w-4" />
-                <span className="text-sm">Topics of Interest</span>
-              </div>
-              
-              <p className="text-sm text-muted-foreground">
-                Select the topics you'd like to create content about (choose at least one):
+              <p className="text-sm text-muted-foreground text-center">
+                {formData.userType === "freelancer" 
+                  ? "Choose your area of expertise as a freelancer." 
+                  : "Select the industry domain of your startup."}
               </p>
               
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {availableTopics.map((topic) => (
-                  <div
-                    key={topic}
-                    className={`flex items-center space-x-2 p-3 rounded-lg border cursor-pointer transition-colors ${
-                      formData.topics.includes(topic)
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                    onClick={() => handleTopicToggle(topic)}
-                  >
-                    <Checkbox
-                      checked={formData.topics.includes(topic)}
-                      onChange={() => handleTopicToggle(topic)}
-                    />
-                    <span className="text-sm">{topic}</span>
+              <RadioGroup
+                value={formData.domain}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, domain: value }))}
+                className="space-y-3"
+              >
+                {(formData.userType === "freelancer" ? freelancerDomains : startupDomains).map((domain) => (
+                  <div key={domain} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-all">
+                    <RadioGroupItem value={domain} id={domain} />
+                    <Label htmlFor={domain} className="flex-1 text-left cursor-pointer font-medium">
+                      {domain}
+                    </Label>
                   </div>
                 ))}
-              </div>
+              </RadioGroup>
             </div>
           )}
 
           {step === 3 && (
-            <div className="space-y-6">
-              <div className="flex items-center space-x-2 text-muted-foreground mb-4">
-                <MessageSquare className="h-4 w-4" />
-                <span className="text-sm">Content Preferences</span>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-base font-medium">What's your main goal?</Label>
-                  <RadioGroup
-                    value={formData.goal}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, goal: value }))}
-                    className="mt-2"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="personal_branding" id="personal_branding" />
-                      <Label htmlFor="personal_branding">Develop personal branding</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="startup_promotion" id="startup_promotion" />
-                      <Label htmlFor="startup_promotion">Startup promotion</Label>
-                    </div>
-                  </RadioGroup>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground text-center">
+                Help us understand your main goal for social media presence.
+              </p>
+              
+              <RadioGroup
+                value={formData.socialMediaGoal}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, socialMediaGoal: value as any }))}
+                className="space-y-4"
+              >
+                <div className="flex items-center space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-all">
+                  <RadioGroupItem value="find_clients" id="find_clients" />
+                  <Label htmlFor="find_clients" className="flex-1 text-left cursor-pointer">
+                    <div className="font-medium text-foreground">Find Clients</div>
+                    <div className="text-sm text-muted-foreground">Attract new customers and business opportunities</div>
+                  </Label>
                 </div>
-
-                <div>
-                  <Label className="text-base font-medium">AI Voice & Tone</Label>
-                  <RadioGroup
-                    value={formData.aiVoice}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, aiVoice: value }))}
-                    className="mt-2"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="professional" id="professional" />
-                      <Label htmlFor="professional">Professional</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="friendly" id="friendly" />
-                      <Label htmlFor="friendly">Friendly</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="witty" id="witty" />
-                      <Label htmlFor="witty">Witty</Label>
-                    </div>
-                  </RadioGroup>
+                
+                <div className="flex items-center space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-all">
+                  <RadioGroupItem value="personal_branding" id="personal_branding" />
+                  <Label htmlFor="personal_branding" className="flex-1 text-left cursor-pointer">
+                    <div className="font-medium text-foreground">Personal Branding</div>
+                    <div className="text-sm text-muted-foreground">Build authority and thought leadership</div>
+                  </Label>
                 </div>
-              </div>
+                
+                <div className="flex items-center space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-all">
+                  <RadioGroupItem value="for_fund" id="for_fund" />
+                  <Label htmlFor="for_fund" className="flex-1 text-left cursor-pointer">
+                    <div className="font-medium text-foreground">For Fund</div>
+                    <div className="text-sm text-muted-foreground">Attract investors and funding opportunities</div>
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
           )}
 
           {step === 4 && (
             <div className="space-y-4">
-              <div className="flex items-center space-x-2 text-muted-foreground mb-4">
-                <Sparkles className="h-4 w-4" />
-                <span className="text-sm">About You</span>
+              <p className="text-sm text-muted-foreground text-center">
+                Share details about your expertise and business to help us create relevant content.
+              </p>
+              
+              <div className="space-y-2">
+                <Label htmlFor="business_description">Business Description *</Label>
+                <Textarea
+                  id="business_description"
+                  placeholder="Describe your business, services, expertise, and what makes you unique..."
+                  value={formData.businessDescription}
+                  onChange={(e) => setFormData(prev => ({ ...prev, businessDescription: e.target.value }))}
+                  className="min-h-[120px]"
+                />
               </div>
+            </div>
+          )}
 
+          {step === 5 && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground text-center">
+                Add your personal details to finalize your account setup.
+              </p>
+              
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="about" className="text-base font-medium">
-                    About You & Your Business *
-                  </Label>
-                  <Textarea
-                    id="about"
-                    placeholder="Tell us about yourself, your business, your expertise, and what makes you unique. This helps us create more relevant content for you..."
-                    value={formData.aboutContext}
-                    onChange={(e) => setFormData(prev => ({ ...prev, aboutContext: e.target.value }))}
-                    className="min-h-[100px] mt-2"
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name *</Label>
+                  <Input
+                    id="name"
+                    placeholder="John Doe"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   />
                 </div>
-
-                <div>
-                  <Label htmlFor="preferences" className="text-base font-medium">
-                    Post Preferences & Style (Optional)
-                  </Label>
-                  <Textarea
-                    id="preferences"
-                    placeholder="Describe the type of posts you want to create. Include tone, topics to avoid, preferred formats (threads, single tweets, etc.), and any specific messaging guidelines..."
-                    value={formData.postPreferences}
-                    onChange={(e) => setFormData(prev => ({ ...prev, postPreferences: e.target.value }))}
-                    className="min-h-[80px] mt-2"
+                
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username (Optional)</Label>
+                  <Input
+                    id="username"
+                    placeholder="@johndoe"
+                    value={formData.username}
+                    onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
                   />
                 </div>
-              </div>
-
-              <div className="bg-primary/5 rounded-lg p-4 border border-primary/20">
-                <h4 className="font-medium text-primary mb-2">Selected Topics:</h4>
-                <div className="flex flex-wrap gap-2">
-                  {formData.topics.map((topic) => (
-                    <Badge key={topic} variant="secondary" className="text-xs">
-                      {topic}
-                    </Badge>
-                  ))}
+                
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  />
                 </div>
               </div>
             </div>
@@ -354,12 +321,12 @@ const UserOnboarding = ({ onComplete, initialEmail = "", initialName = "", onSwi
             ) : null}
             
             <div className="ml-auto">
-              {step < 4 ? (
-                <Button onClick={handleNext}>
+              {step < 5 ? (
+                <Button onClick={handleNext} disabled={!canProceed()}>
                   Next
                 </Button>
               ) : (
-                <Button onClick={handleComplete} disabled={loading}>
+                <Button onClick={handleComplete} disabled={loading || !canProceed()}>
                   {loading ? "Creating Profile..." : "Complete Setup"}
                 </Button>
               )}
