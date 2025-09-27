@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import DashboardNavigation from "@/components/DashboardNavigation";
 import RelevantPosts from "@/components/RelevantPosts";
 import DraftedPostsWithTwitterCheck from "@/components/DraftedPostsWithTwitterCheck";
-import AICreator from "@/components/AICreator";
+import AICreatorWithTwitterCheck from "@/components/AICreatorWithTwitterCheck";
 import TwitterConnection from "@/components/TwitterConnection";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
@@ -25,6 +25,17 @@ const Dashboard = () => {
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+
+    // Listen for custom event to switch to connections tab
+    const handleSwitchToConnections = () => {
+      setActiveTab("connections");
+    };
+
+    window.addEventListener('switchToConnections', handleSwitchToConnections);
+    
+    return () => {
+      window.removeEventListener('switchToConnections', handleSwitchToConnections);
+    };
   }, []);
 
   if (loading) {
@@ -62,7 +73,7 @@ const Dashboard = () => {
             
             {activeTab === "drafted" && <DraftedPostsWithTwitterCheck />}
             
-            {activeTab === "ai-creator" && <AICreator />}
+            {activeTab === "ai-creator" && <AICreatorWithTwitterCheck />}
             
             {activeTab === "connections" && (
               <div className="space-y-6">
