@@ -39,8 +39,7 @@ export const useProfile = () => {
         setProfile(userProfile);
         setIsAuthenticated(true);
         
-        // Initialize fake Twitter connection
-        await socialConnectionsApi.updateConnection(userProfile.id, 'twitter', true);
+        // Remove fake Twitter connection - users will connect manually in dashboard
       } else {
         // No user logged in
         setProfile(null);

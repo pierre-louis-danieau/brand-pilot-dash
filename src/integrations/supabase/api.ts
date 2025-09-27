@@ -107,10 +107,15 @@ export const socialConnectionsApi = {
     return data || [];
   },
 
-  // Create or update a social connection (fake for now)
+  // Create or update a social connection
   async updateConnection(profileId: string, platform: string, isConnected: boolean = true): Promise<SocialConnection> {
+    // For Twitter, use real OAuth flow
+    if (platform === 'twitter' && isConnected) {
+      throw new Error('Use connectTwitter() for real Twitter authentication');
+    }
+
     const connectionData = {
-      // Fake connection data for demo
+      // Fake connection data for other platforms
       username: platform === 'twitter' ? '@johndoe' : 'johndoe',
       followers: Math.floor(Math.random() * 10000) + 1000,
       connected_at: new Date().toISOString()
@@ -175,6 +180,47 @@ export const socialConnectionsApi = {
     }
 
     return data?.is_connected || false;
+  },
+
+  // Connect to Twitter using OAuth 2.0
+  async connectTwitter(profileId: string): Promise<{ authUrl: string }> {
+    const url = new URL(`https://iymlvqlpdsauayedemaq.supabase.co/functions/v1/twitter-auth`);
+    url.searchParams.set('action', 'authorize');
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ profileId })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to initiate Twitter connection');
+    }
+    
+    const data = await response.json();
+    return data;
+  },
+
+  // Disconnect Twitter account
+  async disconnectTwitter(profileId: string): Promise<void> {
+    const url = new URL(`https://iymlvqlpdsauayedemaq.supabase.co/functions/v1/twitter-auth`);
+    url.searchParams.set('action', 'disconnect');
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ profileId })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to disconnect Twitter');
+    }
   }
 };
 

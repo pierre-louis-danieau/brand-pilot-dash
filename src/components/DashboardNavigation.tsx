@@ -299,6 +299,14 @@ const DashboardNavigation = ({ activeTab, setActiveTab }: DashboardNavigationPro
                 >
                   ✍️ Drafted Posts
                 </Button>
+                <Button
+                  variant={activeTab === "connections" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setActiveTab("connections")}
+                  className="px-6 py-2"
+                >
+                  🔗 Connections
+                </Button>
               </div>
             </div>
           </div>

@@ -93,30 +93,39 @@ export type Database = {
       }
       social_connections: {
         Row: {
+          access_token: string | null
           connection_data: Json | null
           created_at: string
           id: string
           is_connected: boolean
           platform: string
           profile_id: string
+          refresh_token: string | null
+          token_expires_at: string | null
           updated_at: string
         }
         Insert: {
+          access_token?: string | null
           connection_data?: Json | null
           created_at?: string
           id?: string
           is_connected?: boolean
           platform: string
           profile_id: string
+          refresh_token?: string | null
+          token_expires_at?: string | null
           updated_at?: string
         }
         Update: {
+          access_token?: string | null
           connection_data?: Json | null
           created_at?: string
           id?: string
           is_connected?: boolean
           platform?: string
           profile_id?: string
+          refresh_token?: string | null
+          token_expires_at?: string | null
           updated_at?: string
         }
         Relationships: [

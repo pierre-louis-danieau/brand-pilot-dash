@@ -43,12 +43,7 @@ const LoginForm = ({ onLogin, onSwitchToSignup }: LoginFormProps) => {
         // Store in localStorage
         localStorage.setItem('brandpilot_user', JSON.stringify(userInfo));
         
-        // Initialize fake Twitter connection (handle potential conflicts)
-        try {
-          await socialConnectionsApi.updateConnection(existingProfile.id, 'twitter', true);
-        } catch (connectionError) {
-          console.warn('Twitter connection already exists or failed to create:', connectionError);
-        }
+        // Remove fake Twitter connection - users will connect manually in dashboard
         
         toast({
           title: "Welcome back!",
