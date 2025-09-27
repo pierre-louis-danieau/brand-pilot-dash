@@ -1,3 +1,5 @@
+/// <reference types="https://esm.sh/@supabase/functions-js/src/edge-runtime.d.ts" />
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 
 const corsHeaders = {
@@ -41,8 +43,18 @@ Deno.serve(async (req) => {
   );
 
   const url = new URL(req.url);
-  const requestBody = await req.json();
-  const action = requestBody.action || url.searchParams.get('action');
+  let action = url.searchParams.get('action');
+  
+  let requestBody = {};
+  if (req.method === 'POST') {
+    try {
+      requestBody = await req.json();
+      action = requestBody.action || action;
+    } catch (error) {
+      // Handle cases where there's no JSON body
+      console.log('No JSON body in request');
+    }
+  }
 
   try {
     if (action === 'authorize') {
@@ -108,14 +120,24 @@ Deno.serve(async (req) => {
       }
 
       // Retrieve stored auth data
-      const { data: tempConnection, error: retrieveError } = await supabase
+      const { data: tempConnections, error: retrieveError } = await supabase
         .from('social_connections')
         .select('*')
-        .eq('platform', 'twitter_temp')
-        .eq('connection_data->state', state)
-        .single();
+        .eq('platform', 'twitter_temp');
 
-      if (retrieveError || !tempConnection) {
+      if (retrieveError) {
+        console.error('Error retrieving temp connections:', retrieveError);
+        throw new Error('Invalid state parameter or expired session');
+      }
+
+      // Find the connection with matching state
+      const tempConnection = tempConnections?.find(conn => {
+        const authData = conn.connection_data as any;
+        return authData && authData.state === state;
+      });
+
+      if (!tempConnection) {
+        console.error('No temp connection found for state:', state);
         throw new Error('Invalid state parameter or expired session');
       }
 
@@ -123,16 +145,19 @@ Deno.serve(async (req) => {
       const redirectUri = `https://iymlvqlpdsauayedemaq.supabase.co/functions/v1/twitter-auth?action=callback`;
 
       // Exchange code for access token
+      const clientId = Deno.env.get('TWITTER_CLIENT_ID') || '';
+      const clientSecret = Deno.env.get('TWITTER_CLIENT_SECRET') || '';
+      const basicAuth = btoa(`${clientId}:${clientSecret}`);
+      
       const tokenResponse = await fetch(TWITTER_TOKEN_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${basicAuth}`,
         },
         body: new URLSearchParams({
           code: code,
           grant_type: 'authorization_code',
-          client_id: Deno.env.get('TWITTER_CLIENT_ID') || '',
-          client_secret: Deno.env.get('TWITTER_CLIENT_SECRET') || '',
           redirect_uri: redirectUri,
           code_verifier: authData.code_verifier,
         }),
@@ -176,7 +201,17 @@ Deno.serve(async (req) => {
             id: userData.data.id,
             public_metrics: userData.data.public_metrics || {}
           }
+        }, {
+          onConflict: 'profile_id,platform'
         });
+
+      if (updateError) {
+        console.error('Error updating connection:', updateError);
+        console.error('Token data:', tokenData);
+        console.error('User data:', userData);
+        console.error('Auth data:', authData);
+        throw new Error(`Failed to save Twitter connection: ${updateError.message}`);
+      }
 
       // Clean up temporary connection
       await supabase
@@ -184,13 +219,9 @@ Deno.serve(async (req) => {
         .delete()
         .eq('id', tempConnection.id);
 
-      if (updateError) {
-        console.error('Error updating connection:', updateError);
-        throw new Error('Failed to save Twitter connection');
-      }
-
       // Redirect back to the dashboard with success
-      const dashboardUrl = `${url.origin}/dashboard?twitter_connected=true`;
+      const frontendUrl = Deno.env.get('FRONTEND_URL') || 'http://localhost:8080';
+      const dashboardUrl = `${frontendUrl}/dashboard?twitter_connected=true`;
       return new Response(null, {
         status: 302,
         headers: {
