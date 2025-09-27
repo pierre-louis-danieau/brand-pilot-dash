@@ -395,14 +395,15 @@ export const postsApi = {
   },
 
   // Create a new drafted post
-  async createDraftPost(profileId: string, content: string, platform: string = 'twitter') {
+  async createDraftPost(profileId: string, content: string, platform: string = 'twitter', url?: string) {
     const { data, error } = await supabase
       .from('posts')
       .insert({
         profile_id: profileId,
         content,
         platform,
-        status: 'draft'
+        status: 'draft',
+        url: url || null
       })
       .select()
       .single();
@@ -460,28 +461,6 @@ export const postsApi = {
     return data;
   },
 
-  // Generate AI post using OpenAI
-  async generateAIPost(profileId: string, prompt: string, tone: string, length: string): Promise<{ post: string; characterCount: number }> {
-    const { data, error } = await supabase.functions.invoke('generate-post', {
-      body: {
-        prompt,
-        tone,
-        length,
-        profileId
-      }
-    });
-
-    if (error) {
-      throw new Error(`Failed to generate AI post: ${error.message}`);
-    }
-
-    if (data.error) {
-      throw new Error(data.error);
-    }
-
-    return data;
-  },
-
   // Generate content using external API and save to database
   async generateAndSavePosts(profileId: string): Promise<{ posts: any[], url_article?: string }> {
     // First get the user's profile data
@@ -490,12 +469,29 @@ export const postsApi = {
       throw new Error('Profile not found');
     }
 
+    // Get onboarding profile data for additional context
+    let onboardingProfile = null;
+    if (profile.email) {
+      onboardingProfile = await onboardingProfileApi.getOnboardingProfileByEmail(profile.email);
+    }
+
+    // Build topics_of_interest array including user_type and domain from onboarding
+    let topics_of_interest = profile.topics_of_interest || [];
+    if (onboardingProfile) {
+      if (onboardingProfile.user_type) {
+        topics_of_interest.push(onboardingProfile.user_type);
+      }
+      if (onboardingProfile.domain) {
+        topics_of_interest.push(onboardingProfile.domain);
+      }
+    }
+
     // Prepare the payload for the external API
     const payload = {
-      topics_of_interest: profile.topics_of_interest || [],
-      ai_voice: profile.ai_voice || 'professional',
-      about_context: profile.about_context || '',
-      post_preference: profile.post_preferences || 'engaging'
+      topics_of_interest: topics_of_interest,
+      ai_voice: 'professional', // Default voice for all API requests
+      about_context: onboardingProfile?.social_media_goal || '',
+      post_preference: onboardingProfile?.business_description || ''
     };
 
     console.log('Calling external API with payload:', payload);
@@ -529,7 +525,7 @@ export const postsApi = {
       // Save each generated post to the database
       const savedPosts = await Promise.all(
         result.contents.map(async (content: string) => {
-          return await this.createDraftPost(profileId, content, 'twitter');
+          return await this.createDraftPost(profileId, content, 'twitter', result.url_content);
         })
       );
 
@@ -548,7 +544,29 @@ export const postsApi = {
       }
       throw new Error('Failed to generate content: Unknown error');
     }
-  }
+  },
+
+  // Generate AI post using OpenAI
+  async generateAIPost(profileId: string, prompt: string, tone: string, length: string): Promise<{ post: string; characterCount: number }> {
+    const { data, error } = await supabase.functions.invoke('generate-post', {
+      body: {
+        prompt,
+        tone,
+        length,
+        profileId
+      }
+    });
+
+    if (error) {
+      throw new Error(`Failed to generate AI post: ${error.message}`);
+    }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    return data;
+  },
 };
 
 // Relevant Posts API functions
