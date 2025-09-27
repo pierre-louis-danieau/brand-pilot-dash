@@ -31,7 +31,7 @@ const DashboardNavigation = ({ activeTab, setActiveTab }: DashboardNavigationPro
 
   const handleLogout = async () => {
     await logout();
-    navigate("/login");
+    navigate("/");
   };
 
   // Update local state when profile loads
