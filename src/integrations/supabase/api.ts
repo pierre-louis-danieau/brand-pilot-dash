@@ -278,6 +278,49 @@ export const socialConnectionsApi = {
     }
 
     return data;
+  },
+
+  // Generate AI response for a tweet
+  async generateAIResponse(profileId: string, tweetId: string) {
+    const { data, error } = await supabase.functions.invoke('twitter-auth', {
+      body: {
+        action: 'generateResponse',
+        profileId: profileId,
+        tweetId: tweetId
+      }
+    });
+
+    if (error) {
+      throw new Error(`Failed to generate AI response: ${error.message}`);
+    }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    return data;
+  },
+
+  // Send AI-generated reply to Twitter
+  async sendReply(profileId: string, tweetId: string, replyText: string) {
+    const { data, error } = await supabase.functions.invoke('twitter-auth', {
+      body: {
+        action: 'sendReply',
+        profileId: profileId,
+        tweetId: tweetId,
+        replyText: replyText
+      }
+    });
+
+    if (error) {
+      throw new Error(`Failed to send reply: ${error.message}`);
+    }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    return data;
   }
 };
 
@@ -438,16 +481,35 @@ export const postsApi = {
 export const relevantPostsApi = {
   // Get all relevant posts for a profile
   async getRelevantPosts(profileId: string) {
+    console.log('API: Getting relevant posts for profile:', profileId);
+    
+    // Check current user auth
+    const { data: { user } } = await supabase.auth.getUser();
+    console.log('API: Current authenticated user:', user?.id);
+    console.log('API: Profile ID vs Auth ID match:', profileId === user?.id);
+    
+    // Test 1: Count total rows (this should work even with RLS)
+    const { count, error: countError } = await supabase
+      .from('relevant_posts')
+      .select('*', { count: 'exact', head: true });
+    console.log('API: Total row count in relevant_posts table:', { count, countError });
+    
+    // Test 2: Our actual query
     const { data, error } = await supabase
       .from('relevant_posts')
       .select('*')
       .eq('profile_id', profileId)
       .order('created_at', { ascending: false });
 
+    console.log('API: Main query result:', { data, error });
+    console.log('API: Query details - searching for profileId:', profileId, 'authenticated as user.id:', user?.id);
+
     if (error) {
+      console.error('API: Failed to fetch relevant posts:', error);
       throw new Error(`Failed to fetch relevant posts: ${error.message}`);
     }
 
+    console.log('API: Returning posts:', data || []);
     return data || [];
   },
 
@@ -468,6 +530,7 @@ export const relevantPostsApi = {
       throw new Error(data.error);
     }
 
+    // Return the response which now contains multiple posts
     return data;
   },
 
@@ -483,5 +546,45 @@ export const relevantPostsApi = {
     }
 
     return true;
-  }
+  },
+
+  // Generate AI response for a specific post
+  async generateAIResponse(postId: string) {
+    const { data, error } = await supabase.functions.invoke('twitter-auth', {
+      body: {
+        action: 'generateResponse',
+        postId: postId
+      }
+    });
+
+    if (error) {
+      throw new Error(`Failed to generate AI response: ${error.message}`);
+    }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    return data;
+  },
+
+  // Send reply to Twitter
+  async sendReply(postId: string) {
+    const { data, error } = await supabase.functions.invoke('twitter-auth', {
+      body: {
+        action: 'sendReply',
+        postId: postId
+      }
+    });
+
+    if (error) {
+      throw new Error(`Failed to send reply: ${error.message}`);
+    }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    return data;
+  },
 };

@@ -15,6 +15,7 @@ CREATE TABLE relevant_posts (
   quote_count INTEGER DEFAULT 0,
   topic TEXT,
   context_annotations JSONB,
+  ai_response TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -39,3 +40,15 @@ CREATE POLICY "Users can update their own relevant posts" ON relevant_posts
 
 CREATE POLICY "Users can delete their own relevant posts" ON relevant_posts
   FOR DELETE USING (profile_id = auth.uid());
+
+-- Create updated_at trigger
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_relevant_posts_updated_at BEFORE UPDATE
+    ON relevant_posts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

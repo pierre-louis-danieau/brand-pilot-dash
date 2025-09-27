@@ -13,6 +13,10 @@ const TWITTER_TOKEN_URL = 'https://api.twitter.com/2/oauth2/token';
 const TWITTER_USERINFO_URL = 'https://api.twitter.com/2/users/me';
 const TWITTER_POST_URL = 'https://api.twitter.com/2/tweets';
 const TWITTER_SEARCH_URL = 'https://api.twitter.com/2/tweets/search/recent';
+const TWITTER_REPLY_URL = 'https://api.twitter.com/2/tweets';
+
+// OpenAI API endpoint
+const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
 // Rate limiting constants
 const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes in milliseconds
@@ -59,6 +63,76 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=/g, '');
+}
+
+// Generate AI response for a tweet
+async function generateAIResponse(tweetContent: string, authorName: string, userProfile: any): Promise<string> {
+  const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+  
+  if (!openaiApiKey) {
+    throw new Error('OpenAI API key not configured');
+  }
+
+  const userContext = userProfile ? `
+User's background: ${userProfile.about_context || 'Professional in tech/business'}
+User's voice: ${userProfile.ai_voice || 'Professional and engaging'}
+User's goals: ${userProfile.goal || 'Build meaningful professional connections'}
+User's interests: ${userProfile.topics_of_interest?.join(', ') || 'Technology, business'}
+` : '';
+
+  const prompt = `You are helping a professional generate a thoughtful, engaging reply to a Twitter post. 
+
+${userContext}
+
+Original tweet by ${authorName}:
+"${tweetContent}"
+
+Generate a relevant, professional reply that:
+- Shows genuine interest and adds value to the conversation
+- Reflects the user's professional voice and expertise
+- Is concise (under 280 characters)
+- Encourages further discussion
+- Avoids being overly promotional or salesy
+- Uses a conversational, authentic tone
+
+Reply:`;
+
+  try {
+    const response = await fetch(OPENAI_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert at crafting professional, engaging Twitter replies that build meaningful connections.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 100,
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('OpenAI API error:', errorText);
+      throw new Error('Failed to generate AI response');
+    }
+
+    const data = await response.json();
+    return data.choices[0]?.message?.content?.trim() || 'Thanks for sharing this insight!';
+  } catch (error) {
+    console.error('Error generating AI response:', error);
+    return 'Thanks for sharing this insight!'; // Fallback response
+  }
 }
 
 Deno.serve(async (req) => {
@@ -477,14 +551,26 @@ Deno.serve(async (req) => {
 
       const topics = profile.topics_of_interest || ['technology', 'business'];
       
-      // Clean and format topics for Twitter search
+      // Clean and format topics for Twitter search following official syntax
       const cleanTopics = topics.map((topic: string) => {
-        // Remove special characters that Twitter doesn't like and convert to lowercase
-        return topic.replace(/[&]/g, 'and').replace(/[^\w\s]/g, '').toLowerCase();
-      });
+        // Remove special characters and normalize
+        let cleaned = topic.replace(/[&]/g, '').replace(/[^\w\s]/g, '').trim();
+        
+        // Convert to lowercase and handle multi-word topics
+        cleaned = cleaned.toLowerCase();
+        
+        // For multi-word topics, use quotes for exact phrase matching
+        if (cleaned.includes(' ')) {
+          return `"${cleaned}"`;
+        }
+        
+        return cleaned;
+      }).filter(topic => topic.length > 0); // Remove empty topics
       
-      // Create search query with proper Twitter syntax
-      const query = cleanTopics.join(' OR ');
+      // Create search query following Twitter API v2 syntax
+      // Use parentheses for OR grouping, add filters for quality
+      const topicsQuery = cleanTopics.length > 1 ? `(${cleanTopics.join(' OR ')})` : cleanTopics[0];
+      const query = `${topicsQuery} -is:retweet -is:reply lang:en`;
 
       // Get Twitter connection
       const { data: connections, error: retrieveError } = await supabase
@@ -504,7 +590,7 @@ Deno.serve(async (req) => {
 
       // Search for tweets
       const searchUrl = new URL(TWITTER_SEARCH_URL);
-      searchUrl.searchParams.set('query', `(${query}) -is:retweet lang:en`);
+      searchUrl.searchParams.set('query', query);
       searchUrl.searchParams.set('max_results', '10');
       searchUrl.searchParams.set('tweet.fields', 'created_at,author_id,public_metrics,context_annotations');
       searchUrl.searchParams.set('user.fields', 'name,username');
@@ -537,7 +623,10 @@ Deno.serve(async (req) => {
           throw new Error('No relevant posts found for your topics');
         }
 
-        // Get the first post that hasn't been saved yet
+        // Save all new posts from the search results
+        const savedPosts = [];
+        const skippedPosts = [];
+
         for (const tweet of searchData.data) {
           // Check if this post is already saved
           const { data: existingPost } = await supabase
@@ -548,6 +637,7 @@ Deno.serve(async (req) => {
             .single();
 
           if (existingPost) {
+            skippedPosts.push(tweet.id);
             continue; // Skip if already saved
           }
 
@@ -594,18 +684,162 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          return new Response(JSON.stringify(savedPost), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
+          savedPosts.push(savedPost);
         }
 
-        // If we get here, all posts were already saved
-        throw new Error('All found posts are already in your collection');
+        if (savedPosts.length === 0) {
+          if (skippedPosts.length > 0) {
+            throw new Error(`All ${skippedPosts.length} found posts are already in your collection`);
+          } else {
+            throw new Error('No posts could be saved from the search results');
+          }
+        }
 
+        return new Response(JSON.stringify({ 
+          savedPosts: savedPosts,
+          newPostsCount: savedPosts.length,
+          skippedPostsCount: skippedPosts.length,
+          message: `Successfully saved ${savedPosts.length} new posts${skippedPosts.length > 0 ? ` (${skippedPosts.length} were already saved)` : ''}`
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       } catch (fetchError) {
         console.error('Error in findAndSave:', fetchError);
         throw fetchError;
       }
+
+    } else if (action === 'generateResponse') {
+      // Generate AI response for a specific post
+      const { postId } = requestBody;
+
+      console.log('generateResponse: Received postId:', postId);
+
+      if (!postId) {
+        throw new Error('Post ID is required');
+      }
+
+      // Get the post from database
+      const { data: post, error: postError } = await supabase
+        .from('relevant_posts')
+        .select('*')
+        .eq('id', postId)
+        .single();
+
+      console.log('generateResponse: Database query result:', { post, postError });
+
+      if (postError || !post) {
+        console.error('generateResponse: Post not found. PostId:', postId, 'Error:', postError);
+        throw new Error('Post not found');
+      }
+
+      // Get user's profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', post.profile_id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error('Profile not found');
+      }
+
+      // Generate AI response
+      const aiResponse = await generateAIResponse(post.content, post.author_name, profile);
+
+      // Update the post with the AI response
+      const { data: updatedPost, error: updateError } = await supabase
+        .from('relevant_posts')
+        .update({ ai_response: aiResponse })
+        .eq('id', postId)
+        .select()
+        .single();
+
+      if (updateError) {
+        throw new Error(`Failed to save AI response: ${updateError.message}`);
+      }
+
+      return new Response(JSON.stringify({ 
+        post: updatedPost,
+        aiResponse: aiResponse 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+
+    } else if (action === 'sendReply') {
+      // Send AI-generated reply to Twitter
+      const { postId } = requestBody;
+
+      console.log('sendReply: Received postId:', postId);
+
+      if (!postId) {
+        throw new Error('Post ID is required');
+      }
+
+      // Get the post from database
+      const { data: post, error: postError } = await supabase
+        .from('relevant_posts')
+        .select('*')
+        .eq('id', postId)
+        .single();
+
+      console.log('sendReply: Database query result:', { post, postError });
+
+      if (postError || !post) {
+        console.error('sendReply: Post not found. PostId:', postId, 'Error:', postError);
+        throw new Error('Post not found');
+      }
+
+      if (!post.ai_response) {
+        throw new Error('No AI response found for this post. Generate a response first.');
+      }
+
+      // Get Twitter connection for this profile
+      const { data: connections, error: retrieveError } = await supabase
+        .from('social_connections')
+        .select('*')
+        .eq('profile_id', post.profile_id)
+        .eq('platform', 'twitter');
+
+      if (retrieveError) {
+        throw new Error('Failed to retrieve Twitter connection');
+      }
+
+      const connection = connections?.[0];
+      if (!connection || !connection.access_token) {
+        throw new Error('Twitter connection is not established');
+      }
+
+      // Post the reply to Twitter
+      const replyResponse = await fetch(TWITTER_POST_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${connection.access_token}`,
+        },
+        body: JSON.stringify({
+          text: post.ai_response,
+          reply: {
+            in_reply_to_tweet_id: post.twitter_post_id,
+          },
+        }),
+      });
+
+      if (!replyResponse.ok) {
+        const errorText = await replyResponse.text();
+        console.error('Twitter reply error:', errorText);
+        throw new Error(`Failed to post reply: ${errorText}`);
+      }
+
+      const replyData = await replyResponse.json();
+      console.log('sendReply: Twitter API response:', replyData);
+
+      return new Response(JSON.stringify({ 
+        success: true,
+        twitterResponse: replyData,
+        message: 'Reply posted successfully to Twitter'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
 
     } else {
       throw new Error('Invalid action parameter');

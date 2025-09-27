@@ -23,6 +23,7 @@ interface SavedRelevantPost {
   quote_count: number;
   topic: string;
   context_annotations: any;
+  ai_response?: string;
   created_at: string;
 }
 
@@ -33,27 +34,33 @@ const RelevantPosts = () => {
   const [loading, setLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [hasCheckedConnection, setHasCheckedConnection] = useState(false);
+  const [generatingResponse, setGeneratingResponse] = useState<string | null>(null);
+  const [sendingReply, setSendingReply] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('RelevantPosts: Profile changed:', profile);
     if (profile) {
       checkTwitterConnection();
     }
   }, [profile]);
 
   useEffect(() => {
+    console.log('RelevantPosts: Connection status changed:', { profile: !!profile, isConnected });
     if (profile && isConnected) {
       loadSavedPosts();
     }
   }, [profile, isConnected]);
 
   const checkTwitterConnection = async () => {
+    console.log('RelevantPosts: Checking Twitter connection for profile:', profile?.id);
     if (!profile) return;
     
     try {
       const twitterConnection = await socialConnectionsApi.getTwitterConnection(profile.id);
+      console.log('RelevantPosts: Twitter connection result:', twitterConnection);
       setIsConnected(!!twitterConnection);
     } catch (error) {
-      console.error('Error checking Twitter connection:', error);
+      console.error('RelevantPosts: Error checking Twitter connection:', error);
       setIsConnected(false);
     } finally {
       setHasCheckedConnection(true);
@@ -61,13 +68,16 @@ const RelevantPosts = () => {
   };
 
   const loadSavedPosts = async () => {
+    console.log('RelevantPosts: Loading saved posts for profile:', profile?.id);
     if (!profile) return;
     
     try {
       const savedPosts = await relevantPostsApi.getRelevantPosts(profile.id);
+      console.log('RelevantPosts: Loaded saved posts:', savedPosts);
+      console.log('RelevantPosts: Number of posts:', savedPosts?.length || 0);
       setPosts(savedPosts);
     } catch (error) {
-      console.error('Error loading saved posts:', error);
+      console.error('RelevantPosts: Error loading saved posts:', error);
     }
   };
 
@@ -77,21 +87,26 @@ const RelevantPosts = () => {
     try {
       setLoading(true);
       
-      // Find and save a new relevant post
-      const savedPost = await relevantPostsApi.findAndSaveRelevantPost(profile.id);
+      // Find and save new relevant posts (now returns multiple posts)
+      const result = await relevantPostsApi.findAndSaveRelevantPost(profile.id);
       
-      if (savedPost) {
-        // Add the new post to the beginning of the list
-        setPosts(prevPosts => [savedPost, ...prevPosts]);
+      if (result && result.savedPosts && result.savedPosts.length > 0) {
+        // Add all new posts to the beginning of the list
+        setPosts(prevPosts => [...result.savedPosts, ...prevPosts]);
         
         toast({
-          title: "New relevant post found!",
-          description: "Found and saved a relevant post based on your interests.",
+          title: `Found ${result.newPostsCount} new relevant posts!`,
+          description: result.message,
+        });
+      } else if (result && result.skippedPostsCount > 0) {
+        toast({
+          title: "Posts already saved",
+          description: result.message,
         });
       } else {
         toast({
-          title: "Post already saved",
-          description: "This post was already in your collection.",
+          title: "No new posts found",
+          description: "No relevant posts were found for your interests.",
         });
       }
     } catch (error) {
@@ -151,6 +166,71 @@ const RelevantPosts = () => {
       title: "Comment feature coming soon!",
       description: "AI-generated commenting will be available in the next update.",
     });
+  };
+
+  const generateAIResponse = async (postId: string) => {
+    if (!profile) return;
+    
+    console.log('RelevantPosts: generateAIResponse called with postId:', postId);
+    
+    try {
+      setGeneratingResponse(postId);
+      
+      const result = await relevantPostsApi.generateAIResponse(postId);
+      
+      console.log('RelevantPosts: AI response generated:', result);
+      
+      // Update the post in the local state
+      setPosts(prevPosts => 
+        prevPosts.map(post => 
+          post.id === postId 
+            ? { ...post, ai_response: result.aiResponse }
+            : post
+        )
+      );
+      
+      toast({
+        title: "AI response generated!",
+        description: "Your personalized response is ready to send.",
+      });
+    } catch (error) {
+      console.error('Error generating AI response:', error);
+      toast({
+        title: "Error generating response",
+        description: error instanceof Error ? error.message : "Failed to generate AI response. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingResponse(null);
+    }
+  };
+
+  const sendReply = async (postId: string) => {
+    if (!profile) return;
+    
+    console.log('RelevantPosts: sendReply called with postId:', postId);
+    
+    try {
+      setSendingReply(postId);
+      
+      const result = await relevantPostsApi.sendReply(postId);
+      
+      console.log('RelevantPosts: Reply sent successfully:', result);
+      
+      toast({
+        title: "Reply sent!",
+        description: "Your response has been posted to Twitter.",
+      });
+    } catch (error) {
+      console.error('Error sending reply:', error);
+      toast({
+        title: "Error sending reply",
+        description: error instanceof Error ? error.message : "Failed to send reply. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingReply(null);
+    }
   };
 
   if (!hasCheckedConnection) {
@@ -309,26 +389,82 @@ const RelevantPosts = () => {
                   <div className="flex items-start space-x-3">
                     <div className="flex items-center space-x-2 mb-2">
                       <Sparkles className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium text-primary">AI Suggested Comment</span>
+                      <span className="text-sm font-medium text-primary">AI Response</span>
                     </div>
                   </div>
-                  <p className="text-sm text-foreground leading-relaxed mb-3">
-                    {suggestedComment}
-                  </p>
-                  <div className="flex space-x-2">
-                    <Button 
-                      size="sm" 
-                      variant="default"
-                      onClick={() => handleComment(post.id)}
-                      className="text-xs"
-                    >
-                      <Reply className="h-3 w-3 mr-1" />
-                      Post Comment
-                    </Button>
-                    <Button size="sm" variant="outline" className="text-xs">
-                      Edit Comment
-                    </Button>
-                  </div>
+                  
+                  {post.ai_response ? (
+                    <>
+                      <p className="text-sm text-foreground leading-relaxed mb-3">
+                        {post.ai_response}
+                      </p>
+                      <div className="flex space-x-2">
+                        <Button 
+                          size="sm" 
+                          variant="default"
+                          onClick={() => sendReply(post.id)}
+                          disabled={sendingReply === post.id}
+                          className="text-xs"
+                        >
+                          {sendingReply === post.id ? (
+                            <>
+                              <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            <>
+                              <Reply className="h-3 w-3 mr-1" />
+                              Send Reply
+                            </>
+                          )}
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => generateAIResponse(post.id)}
+                          disabled={generatingResponse === post.id}
+                          className="text-xs"
+                        >
+                          {generatingResponse === post.id ? (
+                            <>
+                              <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                              Regenerating...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              Regenerate
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                        Generate a personalized AI response for this tweet based on your profile and interests.
+                      </p>
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                        onClick={() => generateAIResponse(post.id)}
+                        disabled={generatingResponse === post.id}
+                        className="text-xs"
+                      >
+                        {generatingResponse === post.id ? (
+                          <>
+                            <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-3 w-3 mr-1" />
+                            Generate AI Response
+                          </>
+                        )}
+                      </Button>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
