@@ -298,11 +298,61 @@ Deno.serve(async (req) => {
         throw new Error('Failed to retrieve Twitter connection');
       }
 
-      const connection = connections?.[0];
+      let connection = connections?.[0];
 
       if (!connection || !connection.access_token) {
         console.error('No Twitter connection found or access token is missing');
         throw new Error('Twitter connection is not established or access token is missing');
+      }
+
+      // Check if token is expired and refresh if needed
+      const now = new Date();
+      const expiresAt = connection.token_expires_at ? new Date(connection.token_expires_at) : null;
+      
+      if (expiresAt && now >= expiresAt && connection.refresh_token) {
+        console.log('Access token expired, refreshing...');
+        
+        // Refresh the token
+        const refreshResponse = await fetch(TWITTER_TOKEN_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${btoa(`${Deno.env.get('TWITTER_CLIENT_ID')}:${Deno.env.get('TWITTER_CLIENT_SECRET')}`)}`,
+          },
+          body: new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: connection.refresh_token,
+          }),
+        });
+
+        if (!refreshResponse.ok) {
+          const errorText = await refreshResponse.text();
+          console.error('Token refresh failed:', errorText);
+          throw new Error('Failed to refresh Twitter token. Please reconnect your Twitter account.');
+        }
+
+        const refreshData = await refreshResponse.json();
+        
+        // Update the connection with new tokens
+        const { data: updatedConnection, error: updateError } = await supabase
+          .from('social_connections')
+          .update({
+            access_token: refreshData.access_token,
+            refresh_token: refreshData.refresh_token || connection.refresh_token,
+            token_expires_at: refreshData.expires_in ? 
+              new Date(Date.now() + refreshData.expires_in * 1000).toISOString() : null,
+          })
+          .eq('id', connection.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error('Failed to update refreshed tokens:', updateError);
+          throw new Error('Failed to save refreshed tokens');
+        }
+
+        connection = updatedConnection;
+        console.log('Token refreshed successfully');
       }
 
       const accessToken = connection.access_token;

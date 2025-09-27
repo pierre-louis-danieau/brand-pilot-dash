@@ -349,6 +349,22 @@ export const postsApi = {
     return true;
   },
 
+  // Update post content
+  async updatePostContent(postId: string, content: string) {
+    const { data, error } = await supabase
+      .from('posts')
+      .update({ content })
+      .eq('id', postId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update post content: ${error.message}`);
+    }
+
+    return data;
+  },
+
   // Generate content using external API and save to database
   async generateAndSavePosts(profileId: string): Promise<{ posts: any[], url_article?: string }> {
     // First get the user's profile data

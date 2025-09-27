@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Edit3, Trash2, Send, Calendar, Sparkles, Plus, Loader2, ExternalLink } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Edit3, Trash2, Send, Calendar, Sparkles, Plus, Loader2, ExternalLink, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useProfile } from "@/hooks/useProfile";
 import { postsApi, socialConnectionsApi } from "@/integrations/supabase/api";
@@ -18,6 +19,8 @@ const DraftedPosts = () => {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [articleUrl, setArticleUrl] = useState<string | null>(null);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState<string>("");
 
   useEffect(() => {
     if (profile) {
@@ -87,10 +90,10 @@ const DraftedPosts = () => {
   };
 
   const handleEdit = (postId: string) => {
-    toast({
-      title: "Edit mode",
-      description: "Opening editor for this draft...",
-    });
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+    setEditingPostId(postId);
+    setEditingContent(post.content);
   };
 
   const handleDelete = async (postId: string) => {
@@ -194,6 +197,24 @@ const DraftedPosts = () => {
     return `${Math.floor(diffInHours / 24)}d ago`;
   };
 
+  const handleSaveEdit = async () => {
+    if (!editingPostId) return;
+    try {
+      await postsApi.updatePostContent(editingPostId, editingContent);
+      const updatedPosts = posts.map(post => post.id === editingPostId ? { ...post, content: editingContent } : post);
+      setPosts(updatedPosts);
+      setEditingPostId(null);
+      setEditingContent("");
+    } catch (error) {
+      console.error('Error saving edited post:', error);
+      toast({
+        title: "Error saving edited post",
+        description: error instanceof Error ? error.message : "Failed to save the edited post. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -268,43 +289,72 @@ const DraftedPosts = () => {
             </CardHeader>
             
             <CardContent className="space-y-4">
-              <div className="space-y-3">
+              {editingPostId === post.id ? (
+                <Textarea 
+                  value={editingContent} 
+                  onChange={(e) => setEditingContent(e.target.value)} 
+                  className="w-full text-foreground"
+                />
+              ) : (
                 <p className="text-foreground leading-relaxed">{post.content}</p>
-                
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-2">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    <span className="text-muted-foreground">AI Generated</span>
-                  </div>
-                  <span className={`text-xs ${getCharacterColor(post.content.length)}`}>
-                    {post.content.length}/280 characters
-                  </span>
+              )}
+              
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="text-muted-foreground">AI Generated</span>
                 </div>
+                <span className={`text-xs ${getCharacterColor(post.content.length)}`}>
+                  {post.content.length}/280 characters
+                </span>
               </div>
 
               {/* Actions */}
               <div className="flex items-center justify-between pt-2 border-t border-border">
-                <div className="flex space-x-2">
-                  <Button 
-                    size="sm" 
-                    variant="default"
-                    onClick={() => handlePublish(post.id)}
-                    className="text-xs"
-                  >
-                    <Send className="h-3 w-3 mr-1" />
-                    Publish
-                  </Button>
-                  
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => handleSchedule(post.id)}
-                    className="text-xs"
-                  >
-                    <Calendar className="h-3 w-3 mr-1" />
-                    Schedule
-                  </Button>
-                </div>
+                {editingPostId === post.id ? (
+                  <div className="flex space-x-2">
+                    <Button 
+                      size="sm" 
+                      variant="default"
+                      onClick={handleSaveEdit}
+                      className="text-xs"
+                    >
+                      <Check className="h-3 w-3 mr-1" />
+                      Save
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => setEditingPostId(null)}
+                      className="text-xs text-destructive hover:text-destructive"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex space-x-2">
+                    <Button 
+                      size="sm" 
+                      variant="default"
+                      onClick={() => handlePublish(post.id)}
+                      className="text-xs"
+                    >
+                      <Send className="h-3 w-3 mr-1" />
+                      Publish
+                    </Button>
+                    
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleSchedule(post.id)}
+                      className="text-xs"
+                    >
+                      <Calendar className="h-3 w-3 mr-1" />
+                      Schedule
+                    </Button>
+                  </div>
+                )}
                 
                 <div className="flex space-x-2">
                   <Button 
