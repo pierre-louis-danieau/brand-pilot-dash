@@ -13,6 +13,7 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("drafted");
   const [activePlatform, setActivePlatform] = useState("twitter");
   const [comingSoonPlatform, setComingSoonPlatform] = useState<string | null>(null);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { isAuthenticated, loading } = useProfile();
   const navigate = useNavigate();
 
@@ -75,9 +76,26 @@ const Dashboard = () => {
           setComingSoonPlatform={setComingSoonPlatform}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          isCollapsed={isSidebarCollapsed}
+          setIsCollapsed={setIsSidebarCollapsed}
         />
         
         <main className="flex-1 px-6 py-8">
+          {/* Coming Soon Message for other platforms */}
+          {comingSoonPlatform && comingSoonPlatform !== "twitter" && (
+            <div className="flex items-center justify-center min-h-[400px]">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  {comingSoonPlatform === "linkedin" ? "LinkedIn" : "Reddit"} Integration Coming Soon!
+                </h3>
+                <p className="text-muted-foreground">
+                  We're working hard to bring you {comingSoonPlatform === "linkedin" ? "LinkedIn" : "Reddit"} integration. 
+                  Stay tuned for updates!
+                </p>
+              </div>
+            </div>
+          )}
+          
           {/* Only show content tabs when not on a coming soon platform */}
           {!comingSoonPlatform && (
             <>

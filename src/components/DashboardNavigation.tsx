@@ -272,23 +272,6 @@ const DashboardNavigation = ({ activeTab, setActiveTab, comingSoonPlatform, acti
           </div>
         </nav>
       )}
-      
-      {/* Coming Soon Message for other platforms */}
-      {comingSoonPlatform && comingSoonPlatform !== "twitter" && (
-        <nav className="bg-secondary/20 border-b border-border px-6 py-4">
-          <div className="flex items-center justify-center">
-            <div className="text-center">
-              <h3 className="text-lg font-semibold text-foreground mb-2">
-                {comingSoonPlatform === "linkedin" ? "LinkedIn" : "Reddit"} Integration Coming Soon!
-              </h3>
-              <p className="text-muted-foreground">
-                We're working hard to bring you {comingSoonPlatform === "linkedin" ? "LinkedIn" : "Reddit"} integration. 
-                Stay tuned for updates!
-              </p>
-            </div>
-          </div>
-        </nav>
-      )}
     </>
   );
 };
