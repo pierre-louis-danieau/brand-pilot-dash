@@ -75,7 +75,7 @@ const StatsSection = () => {
       description: "Our AI never sleeps, constantly finding opportunities"
     },
     {
-      number: 10000,
+      number: 100,
       suffix: "+",
       label: "Posts Generated Daily",
       description: "Helping entrepreneurs worldwide create engaging content"
