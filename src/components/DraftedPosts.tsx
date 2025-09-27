@@ -288,40 +288,70 @@ const DraftedPosts = () => {
 
       <div className="space-y-8">
         {Object.entries(groupedPosts).map(([urlKey, postsGroup]) => (
-          <div key={urlKey} className="space-y-4">
+          <div key={urlKey} className={`space-y-4 ${urlKey !== 'no-url' ? 'p-6 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 rounded-xl border-2 border-blue-100/60' : ''}`}>
             {/* Article Source Header */}
             {urlKey !== 'no-url' && postsGroup[0].url && (
-              <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg border border-border/50">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <ExternalLink className="h-4 w-4" />
-                  <span>Generated from article:</span>
+              <div className="flex items-center gap-3 p-4 bg-white/80 backdrop-blur-sm rounded-lg border border-blue-200/60 shadow-sm">
+                <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-full">
+                  <ExternalLink className="h-5 w-5 text-blue-600" />
                 </div>
-                <a 
-                  href={postsGroup[0].url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-sm text-primary hover:text-primary/80 font-medium truncate flex-1"
-                >
-                  {getUrlDomain(postsGroup[0].url)}
-                </a>
-                <Badge variant="outline" className="text-xs">
-                  {postsGroup.length} posts
-                </Badge>
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-gray-900 mb-1">
+                    AI Content Generated From Article
+                  </div>
+                  <a 
+                    href={postsGroup[0].url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium truncate block max-w-md"
+                    title={postsGroup[0].url}
+                  >
+                    {getUrlDomain(postsGroup[0].url)}
+                  </a>
+                </div>
+                <div className="text-right">
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    {postsGroup.length} {postsGroup.length === 1 ? 'post' : 'posts'}
+                  </Badge>
+                </div>
+              </div>
+            )}
+            
+            {urlKey === 'no-url' && (
+              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center justify-center w-10 h-10 bg-gray-100 rounded-full">
+                  <Sparkles className="h-5 w-5 text-gray-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-gray-900">
+                    Custom AI Generated Posts
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Generated without specific article reference
+                  </div>
+                </div>
               </div>
             )}
             
             {/* Posts Grid */}
-            <div className="grid gap-6">
-              {postsGroup.map((post) => (
-                <Card key={post.id} className="shadow-subtle hover:shadow-brand transition-all duration-300 border border-border/50">
+            <div className="grid gap-4 ml-4 border-l-2 border-blue-200/40 pl-6">
+              {postsGroup.map((post, index) => (
+                <Card key={post.id} className="shadow-subtle hover:shadow-brand transition-all duration-300 border border-border/50 bg-white/80 backdrop-blur-sm">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center space-x-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-primary text-white text-sm font-medium">
-                            JD
-                          </AvatarFallback>
-                        </Avatar>
+                        <div className="relative">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="bg-primary text-white text-sm font-medium">
+                              JD
+                            </AvatarFallback>
+                          </Avatar>
+                          {post.url && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                              <span className="text-white text-xs font-bold">{index + 1}</span>
+                            </div>
+                          )}
+                        </div>
                         <div className="flex items-center space-x-2">
                           <span className="text-sm font-medium text-foreground">Your Draft</span>
                           <span className="text-muted-foreground text-sm">·</span>
@@ -338,7 +368,7 @@ const DraftedPosts = () => {
                         </Badge>
                         {post.url && (
                           <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                            Article-based
+                            From: {getUrlDomain(post.url)}
                           </Badge>
                         )}
                       </div>
@@ -360,6 +390,12 @@ const DraftedPosts = () => {
                       <div className="flex items-center space-x-2">
                         <Sparkles className="h-4 w-4 text-primary" />
                         <span className="text-muted-foreground">AI Generated</span>
+                        {post.url && (
+                          <>
+                            <span className="text-muted-foreground">•</span>
+                            <span className="text-blue-600 text-xs">Article-based</span>
+                          </>
+                        )}
                       </div>
                       <span className={`text-xs ${getCharacterColor(post.content.length)}`}>
                         {post.content.length}/280 characters
