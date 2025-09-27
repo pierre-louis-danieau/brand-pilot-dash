@@ -242,6 +242,42 @@ export const socialConnectionsApi = {
     if (error) {
       throw new Error(error.message || 'Failed to post tweet');
     }
+  },
+
+  // Search recent posts on Twitter based on user profile
+  async searchRecentPosts(profileId: string, maxResults: number = 1): Promise<any> {
+    // First get the user's profile to understand their interests
+    const profile = await profileApi.getProfile(profileId);
+    if (!profile) {
+      throw new Error('Profile not found');
+    }
+
+    // Build search query based on user's topics of interest
+    const topics = profile.topics_of_interest || [];
+    let searchQuery = '';
+    
+    if (topics.length > 0) {
+      // Create a search query from topics, excluding retweets and replies
+      searchQuery = topics.map(topic => `"${topic}"`).join(' OR ') + ' -is:retweet -is:reply';
+    } else {
+      // Default search if no topics specified
+      searchQuery = 'technology OR innovation OR startup -is:retweet -is:reply';
+    }
+
+    const { data, error } = await supabase.functions.invoke('twitter-auth', {
+      body: { 
+        profileId,
+        query: searchQuery,
+        maxResults,
+        action: 'search'
+      }
+    });
+    
+    if (error) {
+      throw new Error(error.message || 'Failed to search recent posts');
+    }
+
+    return data;
   }
 };
 
@@ -308,6 +344,58 @@ export const postsApi = {
 
     if (error) {
       throw new Error(`Failed to delete post: ${error.message}`);
+    }
+
+    return true;
+  }
+};
+
+// Relevant Posts API functions
+export const relevantPostsApi = {
+  // Get all relevant posts for a profile
+  async getRelevantPosts(profileId: string) {
+    const { data, error } = await supabase
+      .from('relevant_posts')
+      .select('*')
+      .eq('profile_id', profileId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch relevant posts: ${error.message}`);
+    }
+
+    return data || [];
+  },
+
+  // Find and save a new relevant post
+  async findAndSaveRelevantPost(profileId: string) {
+    const { data, error } = await supabase.functions.invoke('twitter-auth', {
+      body: {
+        action: 'findAndSave',
+        profileId: profileId
+      }
+    });
+
+    if (error) {
+      throw new Error(`Failed to find and save relevant post: ${error.message}`);
+    }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    return data;
+  },
+
+  // Delete a relevant post
+  async deleteRelevantPost(postId: string) {
+    const { error } = await supabase
+      .from('relevant_posts')
+      .delete()
+      .eq('id', postId);
+
+    if (error) {
+      throw new Error(`Failed to delete relevant post: ${error.message}`);
     }
 
     return true;

@@ -49,10 +49,7 @@ const Dashboard = () => {
       
       <main className="container mx-auto px-6 py-8">
         {activeTab === "relevant" && (
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold text-foreground mb-4">Relevant Posts</h2>
-            <p className="text-muted-foreground">Coming soon! We'll show you relevant posts from your network here.</p>
-          </div>
+          <RelevantPosts />
         )}
         
         {activeTab === "drafted" && <DraftedPosts />}
