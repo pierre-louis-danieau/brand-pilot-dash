@@ -3,10 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Settings, Bell, User, Zap, Twitter, MessageCircle, LogOut } from "lucide-react";
+import { Zap, Twitter, MessageCircle, LogOut } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
+import ProfileSettingsDialog from "./ProfileSettingsDialog";
+import { onboardingProfileApi } from "@/integrations/supabase/api";
+import type { Database } from "@/integrations/supabase/types";
+
+type OnboardingProfile = Database['public']['Tables']['onboarding_profiles']['Row'];
 
 interface DashboardNavigationProps {
   activeTab: string;
@@ -16,12 +21,7 @@ interface DashboardNavigationProps {
 }
 
 const DashboardNavigation = ({ activeTab, setActiveTab, comingSoonPlatform, activePlatform }: DashboardNavigationProps) => {
-  const [showSettings, setShowSettings] = useState(false);
-  const [userContext, setUserContext] = useState("");
-  const [postPreferences, setPostPreferences] = useState("");
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
-  const [selectedGoal, setSelectedGoal] = useState("personal_branding");
-  const [selectedVoice, setSelectedVoice] = useState("professional");
+  const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
 
   const { profile, loading, updateProfile, userInfo, logout } = useProfile();
   const navigate = useNavigate();
@@ -35,62 +35,24 @@ const DashboardNavigation = ({ activeTab, setActiveTab, comingSoonPlatform, acti
     navigate("/");
   };
 
-  // Update local state when profile loads
+  // Load onboarding profile when component mounts
   useEffect(() => {
-    if (profile) {
-      setUserContext(profile.about_context || "");
-      setPostPreferences(profile.post_preferences || "");
-      setSelectedTopics(profile.topics_of_interest || ["AI & Technology", "Startups"]);
-      setSelectedGoal(profile.goal || "personal_branding");
-      setSelectedVoice(profile.ai_voice || "professional");
-    }
-  }, [profile]);
+    const loadOnboardingProfile = async () => {
+      if (userInfo?.email) {
+        try {
+          const onboardingData = await onboardingProfileApi.getOnboardingProfileByEmail(userInfo.email);
+          setOnboardingProfile(onboardingData);
+        } catch (error) {
+          console.error('Error loading onboarding profile:', error);
+        }
+      }
+    };
 
-  const handleSaveSettings = async () => {
-    try {
-      await updateProfile({
-        about_context: userContext,
-        post_preferences: postPreferences,
-        topics_of_interest: selectedTopics,
-        goal: selectedGoal,
-        ai_voice: selectedVoice
-      });
+    loadOnboardingProfile();
+  }, [userInfo?.email]);
 
-      toast({
-        title: "Settings saved",
-        description: "Your preferences have been updated successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error saving settings",
-        description: "Failed to save your preferences. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getGoalDisplay = (goal: string | null) => {
-    switch (goal) {
-      case 'personal_branding':
-        return 'Develop personal branding';
-      case 'startup_promotion':
-        return 'Startup promotion';
-      default:
-        return 'Develop personal branding';
-    }
-  };
-
-  const getVoiceDisplay = (voice: string | null) => {
-    switch (voice) {
-      case 'professional':
-        return 'Professional';
-      case 'friendly':
-        return 'Friendly';
-      case 'witty':
-        return 'Witty';
-      default:
-        return 'Professional';
-    }
+  const handleProfileUpdate = (updatedProfile: OnboardingProfile) => {
+    setOnboardingProfile(updatedProfile);
   };
 
   if (loading) {
@@ -124,17 +86,10 @@ const DashboardNavigation = ({ activeTab, setActiveTab, comingSoonPlatform, acti
 
           {/* User Info */}
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="icon">
-              <Bell className="h-5 w-5" />
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => setShowSettings(!showSettings)}
-            >
-              <Settings className="h-5 w-5" />
-            </Button>
+            <ProfileSettingsDialog 
+              profile={onboardingProfile}
+              onProfileUpdate={handleProfileUpdate}
+            />
             
             <Button 
               variant="ghost" 
@@ -158,71 +113,6 @@ const DashboardNavigation = ({ activeTab, setActiveTab, comingSoonPlatform, acti
           </div>
         </div>
       </nav>
-
-      {/* Settings Panel */}
-      {showSettings && (
-        <div className="bg-secondary/30 border-b border-border px-6 py-6">
-          <div className="max-w-4xl">
-            <h3 className="font-medium text-foreground mb-4">Settings & Preferences</h3>
-            
-            {/* Basic Settings */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
-              <div>
-                <label className="text-muted-foreground">Topics:</label>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {selectedTopics.map((topic, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">{topic}</Badge>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="text-muted-foreground">Goal:</label>
-                <p className="text-foreground">{getGoalDisplay(selectedGoal)}</p>
-              </div>
-              <div>
-                <label className="text-muted-foreground">AI Voice:</label>
-                <p className="text-foreground">{getVoiceDisplay(selectedVoice)}</p>
-              </div>
-            </div>
-            
-            {/* Content Preferences */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  About You & Your Business
-                </label>
-                <Textarea
-                  placeholder="Tell us about yourself, your business, your expertise, and what makes you unique. This helps us create more relevant content for you..."
-                  value={userContext}
-                  onChange={(e) => setUserContext(e.target.value)}
-                  className="min-h-[80px]"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Post Preferences & Style
-                </label>
-                <Textarea
-                  placeholder="Describe the type of posts you want to create or react to. Include tone, topics to avoid, preferred formats (threads, single tweets, etc.), and any specific messaging guidelines..."
-                  value={postPreferences}
-                  onChange={(e) => setPostPreferences(e.target.value)}
-                  className="min-h-[80px]"
-                />
-              </div>
-              
-              <Button 
-                size="sm" 
-                onClick={handleSaveSettings}
-                className="w-fit"
-                disabled={loading}
-              >
-                {loading ? "Saving..." : "Save Changes"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Content Type Navigation - Only show when Twitter is active */}
       {activePlatform === "twitter" && !comingSoonPlatform && (

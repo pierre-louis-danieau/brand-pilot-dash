@@ -4,6 +4,8 @@ import type { Database } from './types';
 type Profile = Database['public']['Tables']['profiles']['Row'];
 type ProfileInsert = Database['public']['Tables']['profiles']['Insert'];
 type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
+type OnboardingProfile = Database['public']['Tables']['onboarding_profiles']['Row'];
+type OnboardingProfileUpdate = Database['public']['Tables']['onboarding_profiles']['Update'];
 type SocialConnection = Database['public']['Tables']['social_connections']['Row'];
 type SocialConnectionInsert = Database['public']['Tables']['social_connections']['Insert'];
 
@@ -84,6 +86,56 @@ export const profileApi = {
 
     if (error) {
       console.error('Error fetching profile:', error);
+      return null;
+    }
+
+    return data;
+  }
+};
+
+// Onboarding Profile API functions
+export const onboardingProfileApi = {
+  // Get onboarding profile by email
+  async getOnboardingProfileByEmail(email: string): Promise<OnboardingProfile | null> {
+    const { data, error } = await supabase
+      .from('onboarding_profiles')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+      throw new Error(`Failed to fetch onboarding profile: ${error.message}`);
+    }
+
+    return data || null;
+  },
+
+  // Update onboarding profile
+  async updateOnboardingProfile(profileId: string, updates: OnboardingProfileUpdate): Promise<OnboardingProfile> {
+    const { data, error } = await supabase
+      .from('onboarding_profiles')
+      .update(updates)
+      .eq('id', profileId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update onboarding profile: ${error.message}`);
+    }
+
+    return data;
+  },
+
+  // Get onboarding profile by ID
+  async getOnboardingProfile(profileId: string): Promise<OnboardingProfile | null> {
+    const { data, error } = await supabase
+      .from('onboarding_profiles')
+      .select('*')
+      .eq('id', profileId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching onboarding profile:', error);
       return null;
     }
 
@@ -590,8 +642,6 @@ export const relevantPostsApi = {
 };
 
 // Onboarding API functions
-type OnboardingProfile = Database['public']['Tables']['onboarding_profiles']['Row'];
-type OnboardingProfileInsert = Database['public']['Tables']['onboarding_profiles']['Insert'];
 
 export const onboardingApi = {
   createOnboardingProfile: async (profileData: {
