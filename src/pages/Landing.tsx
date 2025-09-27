@@ -15,11 +15,14 @@ import dashboardImage from "@/assets/dashboard-preview.jpg";
 import freelancerImage from "@/assets/freelancer-success.jpg";
 import startupImage from "@/assets/startup-celebration.jpg";
 import aiAbstractImage from "@/assets/ai-social-abstract.jpg";
-
 const Landing = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, userInfo, logout, loading } = useProfile();
-
+  const {
+    isAuthenticated,
+    userInfo,
+    logout,
+    loading
+  } = useProfile();
   const handleGetStarted = () => {
     if (isAuthenticated) {
       navigate("/dashboard");
@@ -27,17 +30,14 @@ const Landing = () => {
       navigate("/auth");
     }
   };
-
   const handleLogout = () => {
     logout();
     toast({
       title: "Logged out",
-      description: "You have been logged out successfully.",
+      description: "You have been logged out successfully."
     });
   };
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Navigation */}
       <nav className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
@@ -51,16 +51,10 @@ const Landing = () => {
             
             {/* Navigation Links */}
             <div className="hidden md:flex items-center space-x-6">
-              <button 
-                onClick={() => navigate("/product")}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
+              <button onClick={() => navigate("/product")} className="text-muted-foreground hover:text-foreground transition-colors">
                 Product
               </button>
-              <button 
-                onClick={() => navigate("/pricing")}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
+              <button onClick={() => navigate("/pricing")} className="text-muted-foreground hover:text-foreground transition-colors">
                 Pricing
               </button>
             </div>
@@ -68,15 +62,8 @@ const Landing = () => {
           
           {/* User Info or Sign In */}
           <div className="flex items-center space-x-4">
-            {loading ? (
-              <div className="text-sm text-muted-foreground">Loading...</div>
-            ) : isAuthenticated && userInfo ? (
-              <div className="flex items-center space-x-3">
-                <Button
-                  variant="ghost"
-                  onClick={() => navigate("/dashboard")}
-                  className="flex items-center space-x-2"
-                >
+            {loading ? <div className="text-sm text-muted-foreground">Loading...</div> : isAuthenticated && userInfo ? <div className="flex items-center space-x-3">
+                <Button variant="ghost" onClick={() => navigate("/dashboard")} className="flex items-center space-x-2">
                   <Avatar className="h-6 w-6">
                     <AvatarFallback className="bg-primary text-white text-xs font-medium">
                       {userInfo.name.split(' ').map(n => n[0]).join('').toUpperCase()}
@@ -84,23 +71,12 @@ const Landing = () => {
                   </Avatar>
                   <span className="text-sm font-medium">{userInfo.name}</span>
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleLogout}
-                  title="Logout"
-                >
+                <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout">
                   <LogOut className="h-4 w-4" />
                 </Button>
-              </div>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={handleGetStarted}
-              >
+              </div> : <Button variant="outline" onClick={handleGetStarted}>
                 Sign In
-              </Button>
-            )}
+              </Button>}
           </div>
         </div>
       </nav>
@@ -122,24 +98,12 @@ const Landing = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
-              <Button 
-                variant="hero" 
-                size="xl" 
-                onClick={handleGetStarted}
-                className="group hover:transform hover:scale-105 transition-all duration-300"
-              >
+              <Button variant="hero" size="xl" onClick={handleGetStarted} className="group hover:transform hover:scale-105 transition-all duration-300">
                 {isAuthenticated ? "Go to Dashboard" : "Start Free Trial"}
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
               </Button>
               
-              <Button 
-                variant="outline" 
-                size="xl"
-                className="group hover:transform hover:scale-105 transition-all duration-300"
-              >
-                <Play className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
-                Watch Demo
-              </Button>
+              
             </div>
 
             <div className="flex items-center justify-center lg:justify-start space-x-6 text-sm text-muted-foreground">
@@ -157,11 +121,7 @@ const Landing = () => {
           {/* Hero Image */}
           <div className="relative">
             <div className="relative overflow-hidden rounded-2xl shadow-2xl">
-              <img 
-                src={heroImage} 
-                alt="Entrepreneur working with AI-powered social media tools"
-                className="w-full h-auto hover:scale-105 transition-transform duration-700"
-              />
+              <img src={heroImage} alt="Entrepreneur working with AI-powered social media tools" className="w-full h-auto hover:scale-105 transition-transform duration-700" />
               <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent"></div>
             </div>
             
@@ -221,48 +181,7 @@ const Landing = () => {
       <InteractiveFeatures />
 
       {/* Dashboard Preview Section */}
-      <section className="py-20 bg-gradient-to-br from-background to-secondary/20">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-foreground mb-4">
-              See BrandPilot in Action
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Get a glimpse of the powerful dashboard that's helping entrepreneurs worldwide grow their social media presence.
-            </p>
-          </div>
-          
-          <div className="max-w-5xl mx-auto">
-            <div className="relative overflow-hidden rounded-2xl shadow-2xl border border-border/50">
-              <img 
-                src={dashboardImage} 
-                alt="BrandPilot Dashboard Preview"
-                className="w-full h-auto hover:scale-105 transition-transform duration-700"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10"></div>
-              
-              {/* Floating UI Elements */}
-              <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg">
-                <div className="flex items-center space-x-2">
-                  <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium">Live Analytics</span>
-                </div>
-              </div>
-              
-              <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg">
-                <div className="flex items-center space-x-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">AI Generated</span>
-                </div>
-              </div>
-              
-              <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg">
-                <span className="text-sm font-medium">+24% Engagement</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      
 
       {/* Target Audience Section */}
       <section className="py-20">
@@ -280,11 +199,7 @@ const Landing = () => {
             {/* Freelancers */}
             <div className="bg-card-gradient p-8 rounded-2xl shadow-subtle border border-border/50 hover:shadow-brand transition-all duration-300 group">
               <div className="relative mb-6">
-                <img 
-                  src={freelancerImage} 
-                  alt="Freelancer success story"
-                  className="w-full h-48 object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
-                />
+                <img src={freelancerImage} alt="Freelancer success story" className="w-full h-48 object-cover rounded-xl group-hover:scale-105 transition-transform duration-300" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-xl"></div>
                 <div className="absolute bottom-4 left-4">
                   <div className="h-12 w-12 bg-primary/90 rounded-xl flex items-center justify-center">
@@ -316,11 +231,7 @@ const Landing = () => {
             {/* Startup Founders */}
             <div className="bg-card-gradient p-8 rounded-2xl shadow-subtle border border-border/50 hover:shadow-brand transition-all duration-300 group">
               <div className="relative mb-6">
-                <img 
-                  src={startupImage} 
-                  alt="Startup founder celebrating success"
-                  className="w-full h-48 object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
-                />
+                <img src={startupImage} alt="Startup founder celebrating success" className="w-full h-48 object-cover rounded-xl group-hover:scale-105 transition-transform duration-300" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-xl"></div>
                 <div className="absolute bottom-4 left-4">
                   <div className="h-12 w-12 bg-primary/90 rounded-xl flex items-center justify-center">
@@ -353,66 +264,7 @@ const Landing = () => {
       </section>
 
       {/* Community Section */}
-      <section className="py-20 bg-gradient-to-br from-secondary/10 to-background">
-        <div className="container mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-12 items-center max-w-6xl mx-auto">
-            <div>
-              <h2 className="text-4xl font-bold text-foreground mb-6">
-                Join a Community of Successful Entrepreneurs
-              </h2>
-              <p className="text-xl text-muted-foreground mb-8">
-                Connect with like-minded entrepreneurs, share insights, and learn from each other's success stories.
-              </p>
-              
-              <div className="space-y-4">
-                <div className="flex items-center space-x-4 p-4 bg-card rounded-xl border border-border/50 hover:shadow-subtle transition-all duration-300">
-                  <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Users className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-foreground">Active Community</h4>
-                    <p className="text-sm text-muted-foreground">1000+ entrepreneurs sharing tips daily</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-4 p-4 bg-card rounded-xl border border-border/50 hover:shadow-subtle transition-all duration-300">
-                  <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Clock className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-foreground">Weekly Workshops</h4>
-                    <p className="text-sm text-muted-foreground">Learn advanced social media strategies</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-4 p-4 bg-card rounded-xl border border-border/50 hover:shadow-subtle transition-all duration-300">
-                  <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <BarChart3 className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-foreground">Success Stories</h4>
-                    <p className="text-sm text-muted-foreground">Real results from real entrepreneurs</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="relative">
-              <img 
-                src={communityImage} 
-                alt="Entrepreneurs collaborating and sharing ideas"
-                className="w-full h-auto rounded-2xl shadow-2xl hover:scale-105 transition-transform duration-700"
-              />
-              <div className="absolute -bottom-6 -right-6 bg-primary text-white p-4 rounded-xl shadow-lg">
-                <div className="text-center">
-                  <div className="text-2xl font-bold">1000+</div>
-                  <div className="text-sm opacity-90">Active Members</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      
 
       {/* Benefits Section */}
       <section className="bg-gradient-to-br from-primary/5 to-secondary/5 py-20">
@@ -464,11 +316,7 @@ const Landing = () => {
       <section className="py-20 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5"></div>
         <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2">
-          <img 
-            src={aiAbstractImage} 
-            alt="AI Social Media Abstract"
-            className="w-96 h-96 opacity-20 object-cover rounded-full"
-          />
+          <img src={aiAbstractImage} alt="AI Social Media Abstract" className="w-96 h-96 opacity-20 object-cover rounded-full" />
         </div>
         
         <div className="container mx-auto px-6 text-center relative z-10">
@@ -480,21 +328,11 @@ const Landing = () => {
               Join ambitious entrepreneurs who've reclaimed their time while growing their brands with BrandPilot.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                variant="gradient" 
-                size="xl" 
-                onClick={handleGetStarted}
-                className="group hover:transform hover:scale-105 transition-all duration-300"
-              >
+              <Button variant="gradient" size="xl" onClick={handleGetStarted} className="group hover:transform hover:scale-105 transition-all duration-300">
                 {isAuthenticated ? "Go to Dashboard" : "Start Free Trial"}
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
               </Button>
-              <Button 
-                variant="outline" 
-                size="xl" 
-                onClick={() => navigate("/product")}
-                className="hover:transform hover:scale-105 transition-all duration-300"
-              >
+              <Button variant="outline" size="xl" onClick={() => navigate("/product")} className="hover:transform hover:scale-105 transition-all duration-300">
                 Learn More
               </Button>
             </div>
@@ -506,8 +344,6 @@ const Landing = () => {
       </section>
       
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default Landing;
