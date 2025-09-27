@@ -116,22 +116,49 @@ export const socialConnectionsApi = {
       connected_at: new Date().toISOString()
     };
 
-    const { data, error } = await supabase
+    // First check if connection already exists
+    const { data: existingConnection } = await supabase
       .from('social_connections')
-      .upsert({
-        profile_id: profileId,
-        platform,
-        is_connected: isConnected,
-        connection_data: connectionData
-      })
-      .select()
-      .single();
+      .select('*')
+      .eq('profile_id', profileId)
+      .eq('platform', platform)
+      .maybeSingle();
 
-    if (error) {
-      throw new Error(`Failed to update connection: ${error.message}`);
+    if (existingConnection) {
+      // Update existing connection
+      const { data, error } = await supabase
+        .from('social_connections')
+        .update({
+          is_connected: isConnected,
+          connection_data: connectionData
+        })
+        .eq('profile_id', profileId)
+        .eq('platform', platform)
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to update connection: ${error.message}`);
+      }
+      return data;
+    } else {
+      // Create new connection
+      const { data, error } = await supabase
+        .from('social_connections')
+        .insert({
+          profile_id: profileId,
+          platform,
+          is_connected: isConnected,
+          connection_data: connectionData
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to create connection: ${error.message}`);
+      }
+      return data;
     }
-
-    return data;
   },
 
   // Check if a platform is connected
