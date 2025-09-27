@@ -1,9 +1,29 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Zap, Target, TrendingUp, CheckCircle } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ArrowRight, Zap, Target, TrendingUp, CheckCircle, User, LogOut } from "lucide-react";
+import { useProfile } from "@/hooks/useProfile";
+import { toast } from "@/hooks/use-toast";
 
 const Landing = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, userInfo, logout, loading } = useProfile();
+
+  const handleGetStarted = () => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    } else {
+      navigate("/dashboard"); // This will show the login form
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    toast({
+      title: "Logged out",
+      description: "You have been logged out successfully.",
+    });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -15,6 +35,43 @@ const Landing = () => {
               <Zap className="h-5 w-5 text-white" />
             </div>
             <span className="text-xl font-bold text-foreground">BrandPilot</span>
+          </div>
+          
+          {/* User Info or Sign In */}
+          <div className="flex items-center space-x-4">
+            {loading ? (
+              <div className="text-sm text-muted-foreground">Loading...</div>
+            ) : isAuthenticated && userInfo ? (
+              <div className="flex items-center space-x-3">
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate("/dashboard")}
+                  className="flex items-center space-x-2"
+                >
+                  <Avatar className="h-6 w-6">
+                    <AvatarFallback className="bg-primary text-white text-xs font-medium">
+                      {userInfo.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium">{userInfo.name}</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  title="Logout"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={handleGetStarted}
+              >
+                Sign In
+              </Button>
+            )}
           </div>
         </div>
       </nav>
@@ -36,10 +93,10 @@ const Landing = () => {
           <Button 
             variant="hero" 
             size="xl" 
-            onClick={() => navigate("/onboarding")}
+            onClick={handleGetStarted}
             className="mb-16"
           >
-            Get Started
+            {isAuthenticated ? "Go to Dashboard" : "Get Started"}
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>
@@ -136,9 +193,9 @@ const Landing = () => {
             <Button 
               variant="gradient" 
               size="lg" 
-              onClick={() => navigate("/onboarding")}
+              onClick={handleGetStarted}
             >
-              Start Your Journey
+              {isAuthenticated ? "Continue to Dashboard" : "Start Your Journey"}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>

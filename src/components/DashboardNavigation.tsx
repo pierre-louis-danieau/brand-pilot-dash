@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Settings, Bell, User, Zap, Twitter, MessageCircle } from "lucide-react";
+import { Settings, Bell, User, Zap, Twitter, MessageCircle, LogOut } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useProfile } from "@/hooks/useProfile";
+import { useNavigate } from "react-router-dom";
 
 interface DashboardNavigationProps {
   activeTab: string;
@@ -16,6 +18,95 @@ const DashboardNavigation = ({ activeTab, setActiveTab }: DashboardNavigationPro
   const [activePlatform, setActivePlatform] = useState("twitter");
   const [userContext, setUserContext] = useState("");
   const [postPreferences, setPostPreferences] = useState("");
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [selectedGoal, setSelectedGoal] = useState("personal_branding");
+  const [selectedVoice, setSelectedVoice] = useState("professional");
+
+  const { profile, loading, updateProfile, userInfo, logout } = useProfile();
+  const navigate = useNavigate();
+
+  const handleLogoClick = () => {
+    navigate("/");
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
+
+  // Update local state when profile loads
+  useEffect(() => {
+    if (profile) {
+      setUserContext(profile.about_context || "");
+      setPostPreferences(profile.post_preferences || "");
+      setSelectedTopics(profile.topics_of_interest || ["AI & Technology", "Startups"]);
+      setSelectedGoal(profile.goal || "personal_branding");
+      setSelectedVoice(profile.ai_voice || "professional");
+    }
+  }, [profile]);
+
+  const handleSaveSettings = async () => {
+    try {
+      await updateProfile({
+        about_context: userContext,
+        post_preferences: postPreferences,
+        topics_of_interest: selectedTopics,
+        goal: selectedGoal,
+        ai_voice: selectedVoice
+      });
+
+      toast({
+        title: "Settings saved",
+        description: "Your preferences have been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error saving settings",
+        description: "Failed to save your preferences. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getGoalDisplay = (goal: string | null) => {
+    switch (goal) {
+      case 'personal_branding':
+        return 'Develop personal branding';
+      case 'startup_promotion':
+        return 'Startup promotion';
+      default:
+        return 'Develop personal branding';
+    }
+  };
+
+  const getVoiceDisplay = (voice: string | null) => {
+    switch (voice) {
+      case 'professional':
+        return 'Professional';
+      case 'friendly':
+        return 'Friendly';
+      case 'witty':
+        return 'Witty';
+      default:
+        return 'Professional';
+    }
+  };
+
+  if (loading) {
+    return (
+      <nav className="bg-card border-b border-border px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2 cursor-pointer" onClick={handleLogoClick}>
+            <div className="h-8 w-8 bg-hero-gradient rounded-lg flex items-center justify-center">
+              <Zap className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-xl font-bold text-foreground">BrandPilot</span>
+          </div>
+          <div className="text-sm text-muted-foreground">Loading...</div>
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <>
@@ -23,7 +114,7 @@ const DashboardNavigation = ({ activeTab, setActiveTab }: DashboardNavigationPro
       <nav className="bg-card border-b border-border px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 cursor-pointer" onClick={handleLogoClick}>
             <div className="h-8 w-8 bg-hero-gradient rounded-lg flex items-center justify-center">
               <Zap className="h-5 w-5 text-white" />
             </div>
@@ -44,13 +135,24 @@ const DashboardNavigation = ({ activeTab, setActiveTab }: DashboardNavigationPro
               <Settings className="h-5 w-5" />
             </Button>
             
-            <div className="flex items-center space-x-3">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={handleLogout}
+              title="Logout"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+            
+            <div className="flex items-center space-x-3 cursor-pointer" onClick={handleLogout}>
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-white text-sm font-medium">
-                  JD
+                  {userInfo?.name ? userInfo.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium text-foreground">John Doe</span>
+              <span className="text-sm font-medium text-foreground">
+                {userInfo?.name || 'User'}
+              </span>
             </div>
           </div>
         </div>
@@ -67,17 +169,18 @@ const DashboardNavigation = ({ activeTab, setActiveTab }: DashboardNavigationPro
               <div>
                 <label className="text-muted-foreground">Topics:</label>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  <Badge variant="secondary" className="text-xs">AI & Technology</Badge>
-                  <Badge variant="secondary" className="text-xs">Startups</Badge>
+                  {selectedTopics.map((topic, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">{topic}</Badge>
+                  ))}
                 </div>
               </div>
               <div>
                 <label className="text-muted-foreground">Goal:</label>
-                <p className="text-foreground">Develop personal branding</p>
+                <p className="text-foreground">{getGoalDisplay(selectedGoal)}</p>
               </div>
               <div>
                 <label className="text-muted-foreground">AI Voice:</label>
-                <p className="text-foreground">Professional</p>
+                <p className="text-foreground">{getVoiceDisplay(selectedVoice)}</p>
               </div>
             </div>
             
@@ -109,15 +212,11 @@ const DashboardNavigation = ({ activeTab, setActiveTab }: DashboardNavigationPro
               
               <Button 
                 size="sm" 
-                onClick={() => {
-                  toast({
-                    title: "Settings saved",
-                    description: "Your preferences have been updated successfully.",
-                  });
-                }}
+                onClick={handleSaveSettings}
                 className="w-fit"
+                disabled={loading}
               >
-                Save Changes
+                {loading ? "Saving..." : "Save Changes"}
               </Button>
             </div>
           </div>
