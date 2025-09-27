@@ -12,12 +12,13 @@ import { toast } from "@/hooks/use-toast";
 import { profileApi } from "@/integrations/supabase/api";
 
 interface UserOnboardingProps {
-  onComplete: (profile: any) => void;
+  onComplete: (profile: any, userInfo: { email: string; name: string }) => void;
   initialEmail?: string;
   initialName?: string;
+  onSwitchToLogin?: () => void;
 }
 
-const UserOnboarding = ({ onComplete, initialEmail = "", initialName = "" }: UserOnboardingProps) => {
+const UserOnboarding = ({ onComplete, initialEmail = "", initialName = "", onSwitchToLogin }: UserOnboardingProps) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   
@@ -117,7 +118,7 @@ const UserOnboarding = ({ onComplete, initialEmail = "", initialName = "" }: Use
         description: "Your profile has been created successfully.",
       });
 
-      onComplete(updatedProfile);
+      onComplete(updatedProfile, { email: formData.email, name: formData.name });
     } catch (error) {
       toast({
         title: "Error creating profile",
@@ -333,7 +334,7 @@ const UserOnboarding = ({ onComplete, initialEmail = "", initialName = "" }: Use
           )}
 
           <div className="flex justify-between pt-4">
-            {step > 1 && (
+            {step > 1 ? (
               <Button
                 variant="outline"
                 onClick={() => setStep(step - 1)}
@@ -341,7 +342,16 @@ const UserOnboarding = ({ onComplete, initialEmail = "", initialName = "" }: Use
               >
                 Back
               </Button>
-            )}
+            ) : onSwitchToLogin ? (
+              <Button
+                variant="ghost"
+                onClick={onSwitchToLogin}
+                disabled={loading}
+                className="text-sm"
+              >
+                Already have an account? Sign in
+              </Button>
+            ) : null}
             
             <div className="ml-auto">
               {step < 4 ? (
