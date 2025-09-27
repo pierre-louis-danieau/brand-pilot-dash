@@ -16,6 +16,7 @@ interface DashboardNavigationProps {
 const DashboardNavigation = ({ activeTab, setActiveTab }: DashboardNavigationProps) => {
   const [showSettings, setShowSettings] = useState(false);
   const [activePlatform, setActivePlatform] = useState("twitter");
+  const [comingSoonPlatform, setComingSoonPlatform] = useState<string | null>(null);
   const [userContext, setUserContext] = useState("");
   const [postPreferences, setPostPreferences] = useState("");
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
@@ -230,7 +231,10 @@ const DashboardNavigation = ({ activeTab, setActiveTab }: DashboardNavigationPro
             <Button
               variant={activePlatform === "twitter" ? "default" : "outline"}
               size="sm"
-              onClick={() => setActivePlatform("twitter")}
+              onClick={() => {
+                setActivePlatform("twitter");
+                setComingSoonPlatform(null);
+              }}
               className="flex items-center space-x-2"
             >
               <Twitter className="h-4 w-4" />
@@ -242,10 +246,11 @@ const DashboardNavigation = ({ activeTab, setActiveTab }: DashboardNavigationPro
               variant="outline"
               size="sm"
               onClick={() => {
-                toast({
-                  title: "Coming Soon!",
-                  description: "LinkedIn integration will be available soon. Stay tuned!",
-                });
+                setActivePlatform("linkedin");
+                setComingSoonPlatform("linkedin");
+                if (activeTab !== "connections") {
+                  setActiveTab("relevant");
+                }
               }}
               className="flex items-center space-x-2 relative"
             >
@@ -260,10 +265,11 @@ const DashboardNavigation = ({ activeTab, setActiveTab }: DashboardNavigationPro
               variant="outline"
               size="sm"
               onClick={() => {
-                toast({
-                  title: "Coming Soon!",
-                  description: "Reddit integration will be available soon. Stay tuned!",
-                });
+                setActivePlatform("reddit");
+                setComingSoonPlatform("reddit");
+                if (activeTab !== "connections") {
+                  setActiveTab("relevant");
+                }
               }}
               className="flex items-center space-x-2"
             >
@@ -280,7 +286,7 @@ const DashboardNavigation = ({ activeTab, setActiveTab }: DashboardNavigationPro
       {/* Content Type Navigation - Only show when Twitter is active */}
       {activePlatform === "twitter" && (
         <nav className="bg-secondary/20 border-b border-border px-6 py-4">
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-between">
             <div className="bg-card rounded-lg p-1 shadow-sm border">
               <div className="flex space-x-1">
                 <Button
@@ -299,6 +305,11 @@ const DashboardNavigation = ({ activeTab, setActiveTab }: DashboardNavigationPro
                 >
                   ✍️ Drafted Posts
                 </Button>
+              </div>
+            </div>
+            
+            <div className="bg-card rounded-lg p-1 shadow-sm border">
+              <div className="flex space-x-1">
                 <Button
                   variant={activeTab === "connections" ? "default" : "ghost"}
                   size="sm"
@@ -308,6 +319,23 @@ const DashboardNavigation = ({ activeTab, setActiveTab }: DashboardNavigationPro
                   🔗 Connections
                 </Button>
               </div>
+            </div>
+          </div>
+        </nav>
+      )}
+      
+      {/* Coming Soon Message for other platforms */}
+      {comingSoonPlatform && comingSoonPlatform !== "twitter" && (
+        <nav className="bg-secondary/20 border-b border-border px-6 py-4">
+          <div className="flex items-center justify-center">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                {comingSoonPlatform === "linkedin" ? "LinkedIn" : "Reddit"} Integration Coming Soon!
+              </h3>
+              <p className="text-muted-foreground">
+                We're working hard to bring you {comingSoonPlatform === "linkedin" ? "LinkedIn" : "Reddit"} integration. 
+                Stay tuned for updates!
+              </p>
             </div>
           </div>
         </nav>
