@@ -15,7 +15,7 @@ const features: Feature[] = [
   {
     id: "discovery",
     title: "Smart Content Discovery",
-    description: "AI scans thousands of posts to find trending content in your industry automatically.",
+    description: "AI finds trending content in your industry automatically.",
     icon: Target,
     color: "from-blue-500 to-blue-600",
     benefits: [
@@ -28,7 +28,7 @@ const features: Feature[] = [
   {
     id: "creation",
     title: "AI-Powered Writing",
-    description: "Generate engaging posts, comments, and replies that match your brand voice perfectly.",
+    description: "Generate engaging posts that match your brand voice.",
     icon: Zap,
     color: "from-purple-500 to-purple-600",
     benefits: [
@@ -41,7 +41,7 @@ const features: Feature[] = [
   {
     id: "analytics",
     title: "Growth Analytics",
-    description: "Track performance metrics and get actionable insights to optimize your strategy.",
+    description: "Track performance and get actionable insights.",
     icon: TrendingUp,
     color: "from-green-500 to-green-600",
     benefits: [
@@ -54,7 +54,7 @@ const features: Feature[] = [
   {
     id: "automation",
     title: "Smart Automation",
-    description: "Schedule posts, auto-engage with relevant content, and manage multiple platforms.",
+    description: "Schedule posts and auto-engage across platforms.",
     icon: BarChart3,
     color: "from-orange-500 to-orange-600",
     benefits: [
