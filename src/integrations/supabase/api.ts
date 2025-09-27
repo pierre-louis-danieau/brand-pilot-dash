@@ -460,6 +460,28 @@ export const postsApi = {
     return data;
   },
 
+  // Generate AI post using OpenAI
+  async generateAIPost(profileId: string, prompt: string, tone: string, length: string): Promise<{ post: string; characterCount: number }> {
+    const { data, error } = await supabase.functions.invoke('generate-post', {
+      body: {
+        prompt,
+        tone,
+        length,
+        profileId
+      }
+    });
+
+    if (error) {
+      throw new Error(`Failed to generate AI post: ${error.message}`);
+    }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    return data;
+  },
+
   // Generate content using external API and save to database
   async generateAndSavePosts(profileId: string): Promise<{ posts: any[], url_article?: string }> {
     // First get the user's profile data

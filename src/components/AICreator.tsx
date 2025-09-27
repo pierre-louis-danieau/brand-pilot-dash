@@ -56,10 +56,9 @@ const AICreator = () => {
     setIsGenerating(true);
     
     try {
-      // For now, we'll create a mock AI-generated post
-      // In a real implementation, this would call an AI service
-      const mockPost = generateMockPost(prompt, tone, length);
-      setGeneratedPost(mockPost);
+      // Use OpenAI API to generate the post
+      const result = await postsApi.generateAIPost(profile.id, prompt, tone, length);
+      setGeneratedPost(result.post);
       
       toast({
         title: "Post generated successfully!",
@@ -69,34 +68,12 @@ const AICreator = () => {
       console.error('Error generating post:', error);
       toast({
         title: "Error generating post",
-        description: "Failed to generate the post. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to generate the post. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  const generateMockPost = (userPrompt: string, selectedTone: string, selectedLength: string): string => {
-    // This is a mock implementation - in production, this would call an AI API
-    const toneStyles = {
-      professional: "Based on my experience,",
-      friendly: "Hey everyone! 👋",
-      witty: "Here's a thought that might surprise you:",
-      inspirational: "Remember this:",
-      educational: "Let me break this down:"
-    };
-
-    const lengthMods = {
-      short: ". That's the key insight.",
-      medium: ". This approach has proven effective in my work, and I believe it can help others too. What are your thoughts?",
-      long: ". This methodology has consistently delivered results across different industries and team sizes. I've seen it transform how organizations approach their challenges, leading to more sustainable and scalable solutions. The key is consistent application and adaptation to your specific context."
-    };
-
-    const starter = toneStyles[selectedTone as keyof typeof toneStyles] || toneStyles.professional;
-    const ending = lengthMods[selectedLength as keyof typeof lengthMods] || lengthMods.medium;
-    
-    return `${starter} ${userPrompt}${ending}`;
   };
 
   const copyToClipboard = () => {

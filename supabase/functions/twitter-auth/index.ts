@@ -246,6 +246,55 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
 
+    } else if (action === 'post') {
+      // Step 4: Post a tweet to Twitter
+      const { profileId, tweet } = requestBody;
+
+      if (!profileId || !tweet) {
+        throw new Error('Profile ID and tweet content are required');
+      }
+
+      // Get the user's Twitter connection
+      const { data: connection, error: connectionError } = await supabase
+        .from('social_connections')
+        .select('access_token')
+        .eq('profile_id', profileId)
+        .eq('platform', 'twitter')
+        .eq('is_connected', true)
+        .single();
+
+      if (connectionError || !connection) {
+        throw new Error('Twitter account not connected or access token not found');
+      }
+
+      // Post the tweet using Twitter API v2
+      const tweetResponse = await fetch('https://api.twitter.com/2/tweets', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${connection.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: tweet
+        }),
+      });
+
+      if (!tweetResponse.ok) {
+        const errorText = await tweetResponse.text();
+        console.error('Twitter post error:', errorText);
+        throw new Error(`Failed to post tweet: ${errorText}`);
+      }
+
+      const tweetData = await tweetResponse.json();
+
+      return new Response(JSON.stringify({ 
+        success: true, 
+        tweetId: tweetData.data?.id,
+        tweetUrl: `https://twitter.com/user/status/${tweetData.data?.id}`
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+
     } else {
       return new Response(JSON.stringify({ error: 'Invalid action' }), {
         status: 400,
