@@ -1,10 +1,20 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowRight, Zap, Target, TrendingUp, CheckCircle, User, LogOut, Clock, Users, BarChart3 } from "lucide-react";
+import { ArrowRight, Zap, Target, TrendingUp, CheckCircle, User, LogOut, Clock, Users, BarChart3, Sparkles, Play } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { toast } from "@/hooks/use-toast";
 import Footer from "@/components/Footer";
+import InteractiveFeatures from "@/components/InteractiveFeatures";
+import StatsSection from "@/components/StatsSection";
+
+// Import images
+import heroImage from "@/assets/hero-entrepreneur.jpg";
+import communityImage from "@/assets/community-collaboration.jpg";
+import dashboardImage from "@/assets/dashboard-preview.jpg";
+import freelancerImage from "@/assets/freelancer-success.jpg";
+import startupImage from "@/assets/startup-celebration.jpg";
+import aiAbstractImage from "@/assets/ai-social-abstract.jpg";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -96,34 +106,84 @@ const Landing = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-6 py-20 text-center">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-5xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
-            AI-Powered Social Media{" "}
-            <span className="bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">
-              for Busy Entrepreneurs
-            </span>
-          </h1>
-          
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
-            Perfect for freelancers and startup founders. Let AI handle your social media growth while you focus on what matters most - building your business.
-          </p>
-          
-          <Button 
-            variant="hero" 
-            size="xl" 
-            onClick={handleGetStarted}
-            className="mb-16"
-          >
-            {isAuthenticated ? "Go to Dashboard" : "Get Started"}
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
+      <section className="container mx-auto px-6 py-20">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          {/* Hero Content */}
+          <div className="text-center lg:text-left">
+            <h1 className="text-5xl md:text-6xl font-bold text-foreground mb-6 leading-tight animate-fade-in">
+              AI-Powered Social Media{" "}
+              <span className="bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">
+                for Busy Entrepreneurs
+              </span>
+            </h1>
+            
+            <p className="text-xl text-muted-foreground mb-8 max-w-2xl leading-relaxed">
+              Perfect for freelancers and startup founders. Let AI handle your social media growth while you focus on what matters most - building your business.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
+              <Button 
+                variant="hero" 
+                size="xl" 
+                onClick={handleGetStarted}
+                className="group hover:transform hover:scale-105 transition-all duration-300"
+              >
+                {isAuthenticated ? "Go to Dashboard" : "Start Free Trial"}
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                size="xl"
+                className="group hover:transform hover:scale-105 transition-all duration-300"
+              >
+                <Play className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
+                Watch Demo
+              </Button>
+            </div>
+
+            <div className="flex items-center justify-center lg:justify-start space-x-6 text-sm text-muted-foreground">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-4 w-4 text-primary" />
+                <span>No credit card required</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-4 w-4 text-primary" />
+                <span>14-day free trial</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Hero Image */}
+          <div className="relative">
+            <div className="relative overflow-hidden rounded-2xl shadow-2xl">
+              <img 
+                src={heroImage} 
+                alt="Entrepreneur working with AI-powered social media tools"
+                className="w-full h-auto hover:scale-105 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent"></div>
+            </div>
+            
+            {/* Floating Elements */}
+            <div className="absolute -top-4 -right-4 bg-primary text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg animate-bounce">
+              <Sparkles className="inline h-4 w-4 mr-1" />
+              AI Powered
+            </div>
+            
+            <div className="absolute -bottom-4 -left-4 bg-card border border-border/50 px-4 py-3 rounded-xl shadow-lg">
+              <div className="flex items-center space-x-2">
+                <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-foreground">Content Generated</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Features Preview */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          <div className="bg-card-gradient p-8 rounded-2xl shadow-subtle border border-border/50 hover:shadow-brand transition-all duration-300 transform hover:-translate-y-1">
-            <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
+        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto mt-20">
+          <div className="bg-card-gradient p-8 rounded-2xl shadow-subtle border border-border/50 hover:shadow-brand transition-all duration-300 transform hover:-translate-y-2 group">
+            <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform duration-300">
               <Target className="h-6 w-6 text-primary" />
             </div>
             <h3 className="text-xl font-semibold text-foreground mb-3">Smart Content Discovery</h3>
@@ -132,8 +192,8 @@ const Landing = () => {
             </p>
           </div>
 
-          <div className="bg-card-gradient p-8 rounded-2xl shadow-subtle border border-border/50 hover:shadow-brand transition-all duration-300 transform hover:-translate-y-1">
-            <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
+          <div className="bg-card-gradient p-8 rounded-2xl shadow-subtle border border-border/50 hover:shadow-brand transition-all duration-300 transform hover:-translate-y-2 group">
+            <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform duration-300">
               <Zap className="h-6 w-6 text-primary" />
             </div>
             <h3 className="text-xl font-semibold text-foreground mb-3">AI-Powered Writing</h3>
@@ -142,14 +202,64 @@ const Landing = () => {
             </p>
           </div>
 
-          <div className="bg-card-gradient p-8 rounded-2xl shadow-subtle border border-border/50 hover:shadow-brand transition-all duration-300 transform hover:-translate-y-1">
-            <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
+          <div className="bg-card-gradient p-8 rounded-2xl shadow-subtle border border-border/50 hover:shadow-brand transition-all duration-300 transform hover:-translate-y-2 group">
+            <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform duration-300">
               <TrendingUp className="h-6 w-6 text-primary" />
             </div>
             <h3 className="text-xl font-semibold text-foreground mb-3">Growth Analytics</h3>
             <p className="text-muted-foreground">
               Track your engagement and optimize your content strategy.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <StatsSection />
+
+      {/* Interactive Features */}
+      <InteractiveFeatures />
+
+      {/* Dashboard Preview Section */}
+      <section className="py-20 bg-gradient-to-br from-background to-secondary/20">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-foreground mb-4">
+              See BrandPilot in Action
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Get a glimpse of the powerful dashboard that's helping entrepreneurs worldwide grow their social media presence.
+            </p>
+          </div>
+          
+          <div className="max-w-5xl mx-auto">
+            <div className="relative overflow-hidden rounded-2xl shadow-2xl border border-border/50">
+              <img 
+                src={dashboardImage} 
+                alt="BrandPilot Dashboard Preview"
+                className="w-full h-auto hover:scale-105 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10"></div>
+              
+              {/* Floating UI Elements */}
+              <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg">
+                <div className="flex items-center space-x-2">
+                  <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium">Live Analytics</span>
+                </div>
+              </div>
+              
+              <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg">
+                <div className="flex items-center space-x-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">AI Generated</span>
+                </div>
+              </div>
+              
+              <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg">
+                <span className="text-sm font-medium">+24% Engagement</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -168,24 +278,35 @@ const Landing = () => {
           
           <div className="grid lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
             {/* Freelancers */}
-            <div className="bg-card-gradient p-8 rounded-2xl shadow-subtle border border-border/50">
-              <div className="h-16 w-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
-                <User className="h-8 w-8 text-primary" />
+            <div className="bg-card-gradient p-8 rounded-2xl shadow-subtle border border-border/50 hover:shadow-brand transition-all duration-300 group">
+              <div className="relative mb-6">
+                <img 
+                  src={freelancerImage} 
+                  alt="Freelancer success story"
+                  className="w-full h-48 object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-xl"></div>
+                <div className="absolute bottom-4 left-4">
+                  <div className="h-12 w-12 bg-primary/90 rounded-xl flex items-center justify-center">
+                    <User className="h-6 w-6 text-white" />
+                  </div>
+                </div>
               </div>
+              
               <h3 className="text-2xl font-bold text-foreground mb-4">For Freelancers</h3>
               <p className="text-muted-foreground mb-6">
                 Build your personal brand and attract high-value clients while focusing on delivering exceptional work.
               </p>
               <div className="space-y-3">
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3 group-hover:translate-x-1 transition-transform duration-300">
                   <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
                   <span className="text-sm text-muted-foreground">Establish thought leadership in your niche</span>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3 group-hover:translate-x-1 transition-transform duration-300">
                   <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
                   <span className="text-sm text-muted-foreground">Share expertise without time investment</span>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3 group-hover:translate-x-1 transition-transform duration-300">
                   <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
                   <span className="text-sm text-muted-foreground">Build trust with potential clients</span>
                 </div>
@@ -193,24 +314,35 @@ const Landing = () => {
             </div>
             
             {/* Startup Founders */}
-            <div className="bg-card-gradient p-8 rounded-2xl shadow-subtle border border-border/50">
-              <div className="h-16 w-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
-                <TrendingUp className="h-8 w-8 text-primary" />
+            <div className="bg-card-gradient p-8 rounded-2xl shadow-subtle border border-border/50 hover:shadow-brand transition-all duration-300 group">
+              <div className="relative mb-6">
+                <img 
+                  src={startupImage} 
+                  alt="Startup founder celebrating success"
+                  className="w-full h-48 object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-xl"></div>
+                <div className="absolute bottom-4 left-4">
+                  <div className="h-12 w-12 bg-primary/90 rounded-xl flex items-center justify-center">
+                    <TrendingUp className="h-6 w-6 text-white" />
+                  </div>
+                </div>
               </div>
+              
               <h3 className="text-2xl font-bold text-foreground mb-4">For Startup Founders</h3>
               <p className="text-muted-foreground mb-6">
                 Scale your brand awareness and build community around your product without hiring a social media team.
               </p>
               <div className="space-y-3">
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3 group-hover:translate-x-1 transition-transform duration-300">
                   <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
                   <span className="text-sm text-muted-foreground">Generate buzz around product launches</span>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3 group-hover:translate-x-1 transition-transform duration-300">
                   <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
                   <span className="text-sm text-muted-foreground">Engage with industry conversations</span>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3 group-hover:translate-x-1 transition-transform duration-300">
                   <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
                   <span className="text-sm text-muted-foreground">Build investor and customer confidence</span>
                 </div>
@@ -220,8 +352,70 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* Community Section */}
+      <section className="py-20 bg-gradient-to-br from-secondary/10 to-background">
+        <div className="container mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-12 items-center max-w-6xl mx-auto">
+            <div>
+              <h2 className="text-4xl font-bold text-foreground mb-6">
+                Join a Community of Successful Entrepreneurs
+              </h2>
+              <p className="text-xl text-muted-foreground mb-8">
+                Connect with like-minded entrepreneurs, share insights, and learn from each other's success stories.
+              </p>
+              
+              <div className="space-y-4">
+                <div className="flex items-center space-x-4 p-4 bg-card rounded-xl border border-border/50 hover:shadow-subtle transition-all duration-300">
+                  <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Users className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-foreground">Active Community</h4>
+                    <p className="text-sm text-muted-foreground">1000+ entrepreneurs sharing tips daily</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-4 p-4 bg-card rounded-xl border border-border/50 hover:shadow-subtle transition-all duration-300">
+                  <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-foreground">Weekly Workshops</h4>
+                    <p className="text-sm text-muted-foreground">Learn advanced social media strategies</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-4 p-4 bg-card rounded-xl border border-border/50 hover:shadow-subtle transition-all duration-300">
+                  <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <BarChart3 className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-foreground">Success Stories</h4>
+                    <p className="text-sm text-muted-foreground">Real results from real entrepreneurs</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="relative">
+              <img 
+                src={communityImage} 
+                alt="Entrepreneurs collaborating and sharing ideas"
+                className="w-full h-auto rounded-2xl shadow-2xl hover:scale-105 transition-transform duration-700"
+              />
+              <div className="absolute -bottom-6 -right-6 bg-primary text-white p-4 rounded-xl shadow-lg">
+                <div className="text-center">
+                  <div className="text-2xl font-bold">1000+</div>
+                  <div className="text-sm opacity-90">Active Members</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Benefits Section */}
-      <section className="bg-secondary/30 py-20">
+      <section className="bg-gradient-to-br from-primary/5 to-secondary/5 py-20">
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto text-center mb-16">
             <h2 className="text-4xl font-bold text-foreground mb-6">
@@ -233,8 +427,8 @@ const Landing = () => {
           </div>
           
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <div className="text-center">
-              <div className="h-16 w-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+            <div className="text-center group hover:transform hover:scale-105 transition-all duration-300">
+              <div className="h-16 w-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:bg-primary/20 transition-colors duration-300">
                 <Clock className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-xl font-semibold text-foreground mb-4">Save 10+ Hours Weekly</h3>
@@ -243,8 +437,8 @@ const Landing = () => {
               </p>
             </div>
             
-            <div className="text-center">
-              <div className="h-16 w-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+            <div className="text-center group hover:transform hover:scale-105 transition-all duration-300">
+              <div className="h-16 w-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:bg-primary/20 transition-colors duration-300">
                 <Users className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-xl font-semibold text-foreground mb-4">Grow Your Audience</h3>
@@ -253,8 +447,8 @@ const Landing = () => {
               </p>
             </div>
             
-            <div className="text-center">
-              <div className="h-16 w-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+            <div className="text-center group hover:transform hover:scale-105 transition-all duration-300">
+              <div className="h-16 w-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:bg-primary/20 transition-colors duration-300">
                 <BarChart3 className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-xl font-semibold text-foreground mb-4">Boost Brand Authority</h3>
@@ -267,8 +461,17 @@ const Landing = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-6 text-center">
+      <section className="py-20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5"></div>
+        <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2">
+          <img 
+            src={aiAbstractImage} 
+            alt="AI Social Media Abstract"
+            className="w-96 h-96 opacity-20 object-cover rounded-full"
+          />
+        </div>
+        
+        <div className="container mx-auto px-6 text-center relative z-10">
           <div className="max-w-2xl mx-auto">
             <h2 className="text-4xl font-bold text-foreground mb-6">
               Ready to Transform Your Social Media?
@@ -281,14 +484,16 @@ const Landing = () => {
                 variant="gradient" 
                 size="xl" 
                 onClick={handleGetStarted}
+                className="group hover:transform hover:scale-105 transition-all duration-300"
               >
                 {isAuthenticated ? "Go to Dashboard" : "Start Free Trial"}
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
               </Button>
               <Button 
                 variant="outline" 
                 size="xl" 
                 onClick={() => navigate("/product")}
+                className="hover:transform hover:scale-105 transition-all duration-300"
               >
                 Learn More
               </Button>
