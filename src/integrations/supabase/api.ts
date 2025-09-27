@@ -184,42 +184,31 @@ export const socialConnectionsApi = {
 
   // Connect to Twitter using OAuth 2.0
   async connectTwitter(profileId: string): Promise<{ authUrl: string }> {
-    const url = new URL(`https://iymlvqlpdsauayedemaq.supabase.co/functions/v1/twitter-auth`);
-    url.searchParams.set('action', 'authorize');
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ profileId })
+    const { data, error } = await supabase.functions.invoke('twitter-auth', {
+      body: { 
+        profileId,
+        action: 'authorize'
+      }
     });
     
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to initiate Twitter connection');
+    if (error) {
+      throw new Error(error.message || 'Failed to initiate Twitter connection');
     }
     
-    const data = await response.json();
     return data;
   },
 
   // Disconnect Twitter account
   async disconnectTwitter(profileId: string): Promise<void> {
-    const url = new URL(`https://iymlvqlpdsauayedemaq.supabase.co/functions/v1/twitter-auth`);
-    url.searchParams.set('action', 'disconnect');
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ profileId })
+    const { error } = await supabase.functions.invoke('twitter-auth', {
+      body: { 
+        profileId,
+        action: 'disconnect'
+      }
     });
     
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to disconnect Twitter');
+    if (error) {
+      throw new Error(error.message || 'Failed to disconnect Twitter');
     }
   }
 };

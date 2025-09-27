@@ -41,12 +41,13 @@ Deno.serve(async (req) => {
   );
 
   const url = new URL(req.url);
-  const action = url.searchParams.get('action');
+  const requestBody = await req.json();
+  const action = requestBody.action || url.searchParams.get('action');
 
   try {
     if (action === 'authorize') {
       // Step 1: Generate authorization URL
-      const { profileId } = await req.json();
+      const { profileId } = requestBody;
       
       if (!profileId) {
         throw new Error('Profile ID is required');
@@ -200,7 +201,7 @@ Deno.serve(async (req) => {
 
     } else if (action === 'disconnect') {
       // Step 3: Disconnect Twitter account
-      const { profileId } = await req.json();
+      const { profileId } = requestBody;
 
       const { error } = await supabase
         .from('social_connections')
