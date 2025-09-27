@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Edit3, Trash2, Send, Calendar, Sparkles, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useProfile } from "@/hooks/useProfile";
-import { postsApi } from "@/integrations/supabase/api";
+import { postsApi, socialConnectionsApi } from "@/integrations/supabase/api";
 import type { Database } from "@/integrations/supabase/types";
 
 type Post = Database['public']['Tables']['posts']['Row'];
@@ -74,6 +74,27 @@ const DraftedPosts = () => {
 
   const handlePublish = async (postId: string) => {
     try {
+      // Check if Twitter is connected
+      const twitterConnection = await socialConnectionsApi.getTwitterConnection(profile.id);
+      if (!twitterConnection) {
+        toast({
+          title: "Twitter connection required",
+          description: "Please connect your Twitter account in the Connections tab to publish posts.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Find the post to get its content
+      const post = posts.find(p => p.id === postId);
+      if (!post) {
+        throw new Error('Post not found');
+      }
+
+      // Post to Twitter first
+      await socialConnectionsApi.postToTwitter(profile.id, post.content);
+      
+      // Then update the database status
       await postsApi.updatePostStatus(postId, 'published');
       
       // Remove from local state
@@ -84,9 +105,10 @@ const DraftedPosts = () => {
         description: "Your post has been published to Twitter successfully.",
       });
     } catch (error) {
+      console.error('Error publishing post:', error);
       toast({
         title: "Error publishing post",
-        description: "Failed to publish the post. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to publish the post. Please try again.",
         variant: "destructive",
       });
     }

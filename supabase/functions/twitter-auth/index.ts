@@ -11,6 +11,7 @@ const corsHeaders = {
 const TWITTER_AUTH_URL = 'https://twitter.com/i/oauth2/authorize';
 const TWITTER_TOKEN_URL = 'https://api.twitter.com/2/oauth2/token';
 const TWITTER_USERINFO_URL = 'https://api.twitter.com/2/users/me';
+const TWITTER_POST_URL = 'https://api.twitter.com/2/tweets';
 
 function generateCodeVerifier(): string {
   const array = new Uint8Array(32);
@@ -247,6 +248,51 @@ Deno.serve(async (req) => {
 
       if (error) {
         throw new Error(`Failed to disconnect Twitter: ${error.message}`);
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+
+    } else if (action === 'post') {
+      // Step 4: Post a tweet
+      const { profileId, tweet } = requestBody;
+
+      const { data: connections, error: retrieveError } = await supabase
+        .from('social_connections')
+        .select('*')
+        .eq('profile_id', profileId)
+        .eq('platform', 'twitter');
+
+      if (retrieveError) {
+        console.error('Error retrieving connections:', retrieveError);
+        throw new Error('Failed to retrieve Twitter connection');
+      }
+
+      const connection = connections?.[0];
+
+      if (!connection || !connection.access_token) {
+        console.error('No Twitter connection found or access token is missing');
+        throw new Error('Twitter connection is not established or access token is missing');
+      }
+
+      const accessToken = connection.access_token;
+
+      const postResponse = await fetch(TWITTER_POST_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          text: tweet,
+        }),
+      });
+
+      if (!postResponse.ok) {
+        const errorText = await postResponse.text();
+        console.error('Twitter post error:', errorText);
+        throw new Error(`Failed to post tweet: ${errorText}`);
       }
 
       return new Response(JSON.stringify({ success: true }), {

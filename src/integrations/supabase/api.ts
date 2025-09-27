@@ -182,6 +182,23 @@ export const socialConnectionsApi = {
     return data?.is_connected || false;
   },
 
+  // Get Twitter connection details
+  async getTwitterConnection(profileId: string): Promise<SocialConnection | null> {
+    const { data, error } = await supabase
+      .from('social_connections')
+      .select('*')
+      .eq('profile_id', profileId)
+      .eq('platform', 'twitter')
+      .eq('is_connected', true)
+      .single();
+
+    if (error) {
+      return null;
+    }
+
+    return data;
+  },
+
   // Connect to Twitter using OAuth 2.0
   async connectTwitter(profileId: string): Promise<{ authUrl: string }> {
     const { data, error } = await supabase.functions.invoke('twitter-auth', {
@@ -209,6 +226,21 @@ export const socialConnectionsApi = {
     
     if (error) {
       throw new Error(error.message || 'Failed to disconnect Twitter');
+    }
+  },
+
+  // Post a tweet to Twitter
+  async postToTwitter(profileId: string, tweet: string): Promise<void> {
+    const { error } = await supabase.functions.invoke('twitter-auth', {
+      body: { 
+        profileId,
+        tweet,
+        action: 'post'
+      }
+    });
+    
+    if (error) {
+      throw new Error(error.message || 'Failed to post tweet');
     }
   }
 };
