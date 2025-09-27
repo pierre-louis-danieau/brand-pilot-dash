@@ -590,6 +590,9 @@ export const relevantPostsApi = {
 };
 
 // Onboarding API functions
+type OnboardingProfile = Database['public']['Tables']['onboarding_profiles']['Row'];
+type OnboardingProfileInsert = Database['public']['Tables']['onboarding_profiles']['Insert'];
+
 export const onboardingApi = {
   createOnboardingProfile: async (profileData: {
     email: string;
@@ -599,9 +602,9 @@ export const onboardingApi = {
     domain: string;
     social_media_goal: 'find_clients' | 'personal_branding' | 'for_fund';
     business_description: string;
-  }) => {
+  }): Promise<OnboardingProfile> => {
     const { data, error } = await supabase
-      .from('onboarding_profiles' as any)
+      .from('onboarding_profiles')
       .insert(profileData)
       .select()
       .single();
@@ -610,9 +613,9 @@ export const onboardingApi = {
     return data;
   },
   
-  getOnboardingProfileByEmail: async (email: string) => {
+  getOnboardingProfileByEmail: async (email: string): Promise<OnboardingProfile | null> => {
     const { data, error } = await supabase
-      .from('onboarding_profiles' as any)
+      .from('onboarding_profiles')
       .select('*')
       .eq('email', email)
       .maybeSingle();
