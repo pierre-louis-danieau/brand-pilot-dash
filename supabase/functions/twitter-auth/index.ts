@@ -1,6 +1,4 @@
-/// <reference types="https://esm.sh/@supabase/functions-js/src/edge-runtime.d.ts" />
-
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,40 +9,6 @@ const corsHeaders = {
 const TWITTER_AUTH_URL = 'https://twitter.com/i/oauth2/authorize';
 const TWITTER_TOKEN_URL = 'https://api.twitter.com/2/oauth2/token';
 const TWITTER_USERINFO_URL = 'https://api.twitter.com/2/users/me';
-const TWITTER_POST_URL = 'https://api.twitter.com/2/tweets';
-const TWITTER_SEARCH_URL = 'https://api.twitter.com/2/tweets/search/recent';
-const TWITTER_REPLY_URL = 'https://api.twitter.com/2/tweets';
-
-// OpenAI API endpoint
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-
-// Rate limiting constants
-const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes in milliseconds
-const MAX_SEARCH_REQUESTS = 300; // Twitter allows 300 requests per 15-minute window
-
-// In-memory cache for rate limiting (in production, use Redis or similar)
-const rateLimitCache = new Map<string, { count: number; resetTime: number }>();
-
-function checkRateLimit(profileId: string): { allowed: boolean; resetTime?: number } {
-  const now = Date.now();
-  const key = `search_${profileId}`;
-  const limit = rateLimitCache.get(key);
-  
-  if (!limit || now > limit.resetTime) {
-    // Reset or initialize rate limit
-    rateLimitCache.set(key, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
-    return { allowed: true };
-  }
-  
-  if (limit.count >= MAX_SEARCH_REQUESTS) {
-    return { allowed: false, resetTime: limit.resetTime };
-  }
-  
-  // Increment count
-  limit.count += 1;
-  rateLimitCache.set(key, limit);
-  return { allowed: true };
-}
 
 function generateCodeVerifier(): string {
   const array = new Uint8Array(32);
@@ -65,76 +29,6 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
     .replace(/=/g, '');
 }
 
-// Generate AI response for a tweet
-async function generateAIResponse(tweetContent: string, authorName: string, userProfile: any): Promise<string> {
-  const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-  
-  if (!openaiApiKey) {
-    throw new Error('OpenAI API key not configured');
-  }
-
-  const userContext = userProfile ? `
-User's background: ${userProfile.about_context || 'Professional in tech/business'}
-User's voice: ${userProfile.ai_voice || 'Professional and engaging'}
-User's goals: ${userProfile.goal || 'Build meaningful professional connections'}
-User's interests: ${userProfile.topics_of_interest?.join(', ') || 'Technology, business'}
-` : '';
-
-  const prompt = `You are helping a professional generate a thoughtful, engaging reply to a Twitter post. 
-
-${userContext}
-
-Original tweet by ${authorName}:
-"${tweetContent}"
-
-Generate a relevant, professional reply that:
-- Shows genuine interest and adds value to the conversation
-- Reflects the user's professional voice and expertise
-- Is concise (under 280 characters)
-- Encourages further discussion
-- Avoids being overly promotional or salesy
-- Uses a conversational, authentic tone
-
-Reply:`;
-
-  try {
-    const response = await fetch(OPENAI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert at crafting professional, engaging Twitter replies that build meaningful connections.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: 100,
-        temperature: 0.7,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI API error:', errorText);
-      throw new Error('Failed to generate AI response');
-    }
-
-    const data = await response.json();
-    return data.choices[0]?.message?.content?.trim() || 'Thanks for sharing this insight!';
-  } catch (error) {
-    console.error('Error generating AI response:', error);
-    return 'Thanks for sharing this insight!'; // Fallback response
-  }
-}
-
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -149,13 +43,12 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   let action = url.searchParams.get('action');
   
-  let requestBody = {};
+  let requestBody: any = {};
   if (req.method === 'POST') {
     try {
       requestBody = await req.json();
       action = requestBody.action || action;
     } catch (error) {
-      // Handle cases where there's no JSON body
       console.log('No JSON body in request');
     }
   }
@@ -173,14 +66,13 @@ Deno.serve(async (req) => {
       const codeChallenge = await generateCodeChallenge(codeVerifier);
       const state = crypto.randomUUID();
 
-      // Store code verifier and state temporarily (you might want to use a more secure storage)
+      // Store code verifier and state temporarily
       const authData = {
         code_verifier: codeVerifier,
         state: state,
         profile_id: profileId
       };
 
-      // Store in a temporary table or use a different approach
       const { error: storeError } = await supabase
         .from('social_connections')
         .upsert({
@@ -235,7 +127,7 @@ Deno.serve(async (req) => {
       }
 
       // Find the connection with matching state
-      const tempConnection = tempConnections?.find(conn => {
+      const tempConnection = tempConnections?.find((conn: any) => {
         const authData = conn.connection_data as any;
         return authData && authData.state === state;
       });
@@ -311,9 +203,6 @@ Deno.serve(async (req) => {
 
       if (updateError) {
         console.error('Error updating connection:', updateError);
-        console.error('Token data:', tokenData);
-        console.error('User data:', userData);
-        console.error('Auth data:', authData);
         throw new Error(`Failed to save Twitter connection: ${updateError.message}`);
       }
 
@@ -357,500 +246,20 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
 
-    } else if (action === 'post') {
-      // Step 4: Post a tweet
-      const { profileId, tweet } = requestBody;
-
-      const { data: connections, error: retrieveError } = await supabase
-        .from('social_connections')
-        .select('*')
-        .eq('profile_id', profileId)
-        .eq('platform', 'twitter');
-
-      if (retrieveError) {
-        console.error('Error retrieving connections:', retrieveError);
-        throw new Error('Failed to retrieve Twitter connection');
-      }
-
-      let connection = connections?.[0];
-
-      if (!connection || !connection.access_token) {
-        console.error('No Twitter connection found or access token is missing');
-        throw new Error('Twitter connection is not established or access token is missing');
-      }
-
-      // Check if token is expired and refresh if needed
-      const now = new Date();
-      const expiresAt = connection.token_expires_at ? new Date(connection.token_expires_at) : null;
-      
-      if (expiresAt && now >= expiresAt && connection.refresh_token) {
-        console.log('Access token expired, refreshing...');
-        
-        // Refresh the token
-        const refreshResponse = await fetch(TWITTER_TOKEN_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Basic ${btoa(`${Deno.env.get('TWITTER_CLIENT_ID')}:${Deno.env.get('TWITTER_CLIENT_SECRET')}`)}`,
-          },
-          body: new URLSearchParams({
-            grant_type: 'refresh_token',
-            refresh_token: connection.refresh_token,
-          }),
-        });
-
-        if (!refreshResponse.ok) {
-          const errorText = await refreshResponse.text();
-          console.error('Token refresh failed:', errorText);
-          throw new Error('Failed to refresh Twitter token. Please reconnect your Twitter account.');
-        }
-
-        const refreshData = await refreshResponse.json();
-        
-        // Update the connection with new tokens
-        const { data: updatedConnection, error: updateError } = await supabase
-          .from('social_connections')
-          .update({
-            access_token: refreshData.access_token,
-            refresh_token: refreshData.refresh_token || connection.refresh_token,
-            token_expires_at: refreshData.expires_in ? 
-              new Date(Date.now() + refreshData.expires_in * 1000).toISOString() : null,
-          })
-          .eq('id', connection.id)
-          .select()
-          .single();
-
-        if (updateError) {
-          console.error('Failed to update refreshed tokens:', updateError);
-          throw new Error('Failed to save refreshed tokens');
-        }
-
-        connection = updatedConnection;
-        console.log('Token refreshed successfully');
-      }
-
-      const accessToken = connection.access_token;
-
-      const postResponse = await fetch(TWITTER_POST_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          text: tweet,
-        }),
-      });
-
-      if (!postResponse.ok) {
-        const errorText = await postResponse.text();
-        console.error('Twitter post error:', errorText);
-        throw new Error(`Failed to post tweet: ${errorText}`);
-      }
-
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-
-    } else if (action === 'search') {
-      // Step 5: Search recent tweets with rate limiting
-      const { profileId, query, maxResults = 10 } = requestBody;
-
-      // Check rate limit first
-      const rateLimitCheck = checkRateLimit(profileId);
-      if (!rateLimitCheck.allowed) {
-        const resetTime = new Date(rateLimitCheck.resetTime!);
-        throw new Error(`Rate limit exceeded. Try again after ${resetTime.toLocaleTimeString()}`);
-      }
-
-      const { data: connections, error: retrieveError } = await supabase
-        .from('social_connections')
-        .select('*')
-        .eq('profile_id', profileId)
-        .eq('platform', 'twitter');
-
-      if (retrieveError) {
-        console.error('Error retrieving connections:', retrieveError);
-        throw new Error('Failed to retrieve Twitter connection');
-      }
-
-      const connection = connections?.[0];
-
-      if (!connection || !connection.access_token) {
-        console.error('No Twitter connection found or access token is missing');
-        throw new Error('Twitter connection is not established or access token is missing');
-      }
-
-      const accessToken = connection.access_token;
-
-      // Build search URL with parameters
-      const searchUrl = new URL(TWITTER_SEARCH_URL);
-      searchUrl.searchParams.set('query', query);
-      searchUrl.searchParams.set('max_results', Math.max(10, maxResults).toString()); // Ensure minimum 10
-      searchUrl.searchParams.set('tweet.fields', 'created_at,author_id,public_metrics,context_annotations');
-      searchUrl.searchParams.set('user.fields', 'name,username,profile_image_url,verified');
-      searchUrl.searchParams.set('expansions', 'author_id');
-
-      try {
-        const searchResponse = await fetch(searchUrl.toString(), {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          },
-        });
-
-        if (!searchResponse.ok) {
-          const errorText = await searchResponse.text();
-          console.error('Twitter search error:', errorText);
-          
-          // Handle specific rate limit error
-          if (searchResponse.status === 429) {
-            // Mark this profile as rate limited
-            const resetTime = Date.now() + (15 * 60 * 1000); // 15 minutes from now
-            rateLimitCache.set(`search_${profileId}`, { 
-              count: MAX_SEARCH_REQUESTS, 
-              resetTime 
-            });
-            throw new Error('Twitter API rate limit reached. Please wait 15 minutes before trying again.');
-          }
-          
-          throw new Error(`Failed to search tweets: ${errorText}`);
-        }
-
-        const searchData = await searchResponse.json();
-
-        return new Response(JSON.stringify(searchData), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      } catch (fetchError) {
-        console.error('Fetch error during Twitter search:', fetchError);
-        throw new Error(`Network error during Twitter search: ${fetchError.message}`);
-      }
-
-    } else if (action === 'findAndSave') {
-      // New action: Find a relevant post and save it to database
-      const { profileId } = requestBody;
-
-      // Check rate limit first
-      const rateLimitCheck = checkRateLimit(profileId);
-      if (!rateLimitCheck.allowed) {
-        const resetTime = new Date(rateLimitCheck.resetTime!);
-        throw new Error(`Rate limit exceeded. Try again after ${resetTime.toLocaleTimeString()}`);
-      }
-
-      // Get user's profile and topics of interest
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('topics_of_interest')
-        .eq('id', profileId)
-        .single();
-
-      if (profileError || !profile) {
-        throw new Error('Failed to fetch user profile');
-      }
-
-      const topics = profile.topics_of_interest || ['technology', 'business'];
-      
-      // Clean and format topics for Twitter search following official syntax
-      const cleanTopics = topics.map((topic: string) => {
-        // Remove special characters and normalize
-        let cleaned = topic.replace(/[&]/g, '').replace(/[^\w\s]/g, '').trim();
-        
-        // Convert to lowercase and handle multi-word topics
-        cleaned = cleaned.toLowerCase();
-        
-        // For multi-word topics, use quotes for exact phrase matching
-        if (cleaned.includes(' ')) {
-          return `"${cleaned}"`;
-        }
-        
-        return cleaned;
-      }).filter(topic => topic.length > 0); // Remove empty topics
-      
-      // Create search query following Twitter API v2 syntax
-      // Use parentheses for OR grouping, add filters for quality
-      const topicsQuery = cleanTopics.length > 1 ? `(${cleanTopics.join(' OR ')})` : cleanTopics[0];
-      const query = `${topicsQuery} -is:retweet -is:reply lang:en`;
-
-      // Get Twitter connection
-      const { data: connections, error: retrieveError } = await supabase
-        .from('social_connections')
-        .select('*')
-        .eq('profile_id', profileId)
-        .eq('platform', 'twitter');
-
-      if (retrieveError) {
-        throw new Error('Failed to retrieve Twitter connection');
-      }
-
-      const connection = connections?.[0];
-      if (!connection || !connection.access_token) {
-        throw new Error('Twitter connection is not established');
-      }
-
-      // Search for tweets
-      const searchUrl = new URL(TWITTER_SEARCH_URL);
-      searchUrl.searchParams.set('query', query);
-      searchUrl.searchParams.set('max_results', '10');
-      searchUrl.searchParams.set('tweet.fields', 'created_at,author_id,public_metrics,context_annotations');
-      searchUrl.searchParams.set('user.fields', 'name,username');
-      searchUrl.searchParams.set('expansions', 'author_id');
-
-      try {
-        const searchResponse = await fetch(searchUrl.toString(), {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${connection.access_token}`,
-          },
-        });
-
-        if (!searchResponse.ok) {
-          if (searchResponse.status === 429) {
-            const resetTime = Date.now() + (15 * 60 * 1000);
-            rateLimitCache.set(`search_${profileId}`, { 
-              count: MAX_SEARCH_REQUESTS, 
-              resetTime 
-            });
-            throw new Error('Twitter API rate limit reached. Please wait 15 minutes before trying again.');
-          }
-          const errorText = await searchResponse.text();
-          throw new Error(`Failed to search tweets: ${errorText}`);
-        }
-
-        const searchData = await searchResponse.json();
-        
-        if (!searchData.data || searchData.data.length === 0) {
-          throw new Error('No relevant posts found for your topics');
-        }
-
-        // Save all new posts from the search results
-        const savedPosts = [];
-        const skippedPosts = [];
-
-        for (const tweet of searchData.data) {
-          // Check if this post is already saved
-          const { data: existingPost } = await supabase
-            .from('relevant_posts')
-            .select('id')
-            .eq('profile_id', profileId)
-            .eq('twitter_post_id', tweet.id)
-            .single();
-
-          if (existingPost) {
-            skippedPosts.push(tweet.id);
-            continue; // Skip if already saved
-          }
-
-          // Find the author info
-          const author = searchData.includes?.users?.find((user: any) => user.id === tweet.author_id);
-          
-          if (!author) continue;
-
-          // Determine topic
-          let topic = 'General';
-          if (tweet.context_annotations && tweet.context_annotations.length > 0) {
-            topic = tweet.context_annotations[0].domain.name;
-          } else {
-            const content = tweet.text.toLowerCase();
-            if (content.includes('ai') || content.includes('artificial intelligence')) topic = 'AI & Technology';
-            else if (content.includes('startup') || content.includes('entrepreneur')) topic = 'Startups';
-            else if (content.includes('marketing') || content.includes('brand')) topic = 'Marketing';
-          }
-
-          // Save the post
-          const { data: savedPost, error: saveError } = await supabase
-            .from('relevant_posts')
-            .insert({
-              profile_id: profileId,
-              twitter_post_id: tweet.id,
-              author_name: author.name,
-              author_username: author.username,
-              author_id: tweet.author_id,
-              content: tweet.text,
-              twitter_url: `https://twitter.com/${author.username}/status/${tweet.id}`,
-              created_at_twitter: tweet.created_at,
-              retweet_count: tweet.public_metrics?.retweet_count || 0,
-              like_count: tweet.public_metrics?.like_count || 0,
-              reply_count: tweet.public_metrics?.reply_count || 0,
-              quote_count: tweet.public_metrics?.quote_count || 0,
-              topic: topic,
-              context_annotations: tweet.context_annotations || null
-            })
-            .select()
-            .single();
-
-          if (saveError) {
-            console.error('Error saving post:', saveError);
-            continue;
-          }
-
-          savedPosts.push(savedPost);
-        }
-
-        if (savedPosts.length === 0) {
-          if (skippedPosts.length > 0) {
-            throw new Error(`All ${skippedPosts.length} found posts are already in your collection`);
-          } else {
-            throw new Error('No posts could be saved from the search results');
-          }
-        }
-
-        return new Response(JSON.stringify({ 
-          savedPosts: savedPosts,
-          newPostsCount: savedPosts.length,
-          skippedPostsCount: skippedPosts.length,
-          message: `Successfully saved ${savedPosts.length} new posts${skippedPosts.length > 0 ? ` (${skippedPosts.length} were already saved)` : ''}`
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      } catch (fetchError) {
-        console.error('Error in findAndSave:', fetchError);
-        throw fetchError;
-      }
-
-    } else if (action === 'generateResponse') {
-      // Generate AI response for a specific post
-      const { postId } = requestBody;
-
-      console.log('generateResponse: Received postId:', postId);
-
-      if (!postId) {
-        throw new Error('Post ID is required');
-      }
-
-      // Get the post from database
-      const { data: post, error: postError } = await supabase
-        .from('relevant_posts')
-        .select('*')
-        .eq('id', postId)
-        .single();
-
-      console.log('generateResponse: Database query result:', { post, postError });
-
-      if (postError || !post) {
-        console.error('generateResponse: Post not found. PostId:', postId, 'Error:', postError);
-        throw new Error('Post not found');
-      }
-
-      // Get user's profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', post.profile_id)
-        .single();
-
-      if (profileError || !profile) {
-        throw new Error('Profile not found');
-      }
-
-      // Generate AI response
-      const aiResponse = await generateAIResponse(post.content, post.author_name, profile);
-
-      // Update the post with the AI response
-      const { data: updatedPost, error: updateError } = await supabase
-        .from('relevant_posts')
-        .update({ ai_response: aiResponse })
-        .eq('id', postId)
-        .select()
-        .single();
-
-      if (updateError) {
-        throw new Error(`Failed to save AI response: ${updateError.message}`);
-      }
-
-      return new Response(JSON.stringify({ 
-        post: updatedPost,
-        aiResponse: aiResponse 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-
-    } else if (action === 'sendReply') {
-      // Send AI-generated reply to Twitter
-      const { postId } = requestBody;
-
-      console.log('sendReply: Received postId:', postId);
-
-      if (!postId) {
-        throw new Error('Post ID is required');
-      }
-
-      // Get the post from database
-      const { data: post, error: postError } = await supabase
-        .from('relevant_posts')
-        .select('*')
-        .eq('id', postId)
-        .single();
-
-      console.log('sendReply: Database query result:', { post, postError });
-
-      if (postError || !post) {
-        console.error('sendReply: Post not found. PostId:', postId, 'Error:', postError);
-        throw new Error('Post not found');
-      }
-
-      if (!post.ai_response) {
-        throw new Error('No AI response found for this post. Generate a response first.');
-      }
-
-      // Get Twitter connection for this profile
-      const { data: connections, error: retrieveError } = await supabase
-        .from('social_connections')
-        .select('*')
-        .eq('profile_id', post.profile_id)
-        .eq('platform', 'twitter');
-
-      if (retrieveError) {
-        throw new Error('Failed to retrieve Twitter connection');
-      }
-
-      const connection = connections?.[0];
-      if (!connection || !connection.access_token) {
-        throw new Error('Twitter connection is not established');
-      }
-
-      // Post the reply to Twitter
-      const replyResponse = await fetch(TWITTER_POST_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${connection.access_token}`,
-        },
-        body: JSON.stringify({
-          text: post.ai_response,
-          reply: {
-            in_reply_to_tweet_id: post.twitter_post_id,
-          },
-        }),
-      });
-
-      if (!replyResponse.ok) {
-        const errorText = await replyResponse.text();
-        console.error('Twitter reply error:', errorText);
-        throw new Error(`Failed to post reply: ${errorText}`);
-      }
-
-      const replyData = await replyResponse.json();
-      console.log('sendReply: Twitter API response:', replyData);
-
-      return new Response(JSON.stringify({ 
-        success: true,
-        twitterResponse: replyData,
-        message: 'Reply posted successfully to Twitter'
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-
     } else {
-      throw new Error('Invalid action parameter');
+      return new Response(JSON.stringify({ error: 'Invalid action' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
   } catch (error: any) {
     console.error('Twitter auth error:', error);
+    
     return new Response(JSON.stringify({ 
-      error: error.message 
+      error: error.message || 'An error occurred during Twitter authentication'
     }), {
-      status: 400,
+      status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
