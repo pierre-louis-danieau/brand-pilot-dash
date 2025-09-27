@@ -490,13 +490,13 @@ export const relevantPostsApi = {
     
     // Test 1: Count total rows (this should work even with RLS)
     const { count, error: countError } = await supabase
-      .from('relevant_posts')
+      .from('relevant_posts' as any)
       .select('*', { count: 'exact', head: true });
     console.log('API: Total row count in relevant_posts table:', { count, countError });
     
     // Test 2: Our actual query
     const { data, error } = await supabase
-      .from('relevant_posts')
+      .from('relevant_posts' as any)
       .select('*')
       .eq('profile_id', profileId)
       .order('created_at', { ascending: false });
@@ -537,7 +537,7 @@ export const relevantPostsApi = {
   // Delete a relevant post
   async deleteRelevantPost(postId: string) {
     const { error } = await supabase
-      .from('relevant_posts')
+      .from('relevant_posts' as any)
       .delete()
       .eq('id', postId);
 

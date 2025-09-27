@@ -75,7 +75,7 @@ const RelevantPosts = () => {
       const savedPosts = await relevantPostsApi.getRelevantPosts(profile.id);
       console.log('RelevantPosts: Loaded saved posts:', savedPosts);
       console.log('RelevantPosts: Number of posts:', savedPosts?.length || 0);
-      setPosts(savedPosts);
+      setPosts(savedPosts as SavedRelevantPost[]);
     } catch (error) {
       console.error('RelevantPosts: Error loading saved posts:', error);
     }
