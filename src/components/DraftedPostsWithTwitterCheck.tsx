@@ -36,8 +36,8 @@ const DraftedPostsWithTwitterCheck = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Drafted Posts</h2>
-            <p className="text-muted-foreground">Checking Twitter connection...</p>
+            <h2 className="text-2xl font-bold text-foreground">Content Studio</h2>
+            <p className="text-muted-foreground">AI-powered content generation from trending articles and industry insights</p>
           </div>
         </div>
         <div className="text-center py-12">
@@ -52,8 +52,8 @@ const DraftedPostsWithTwitterCheck = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Drafted Posts</h2>
-            <p className="text-muted-foreground">AI-generated content ready for review</p>
+            <h2 className="text-2xl font-bold text-foreground">Content Studio</h2>
+            <p className="text-muted-foreground">Transform articles into engaging social media content</p>
           </div>
         </div>
         
@@ -63,9 +63,9 @@ const DraftedPostsWithTwitterCheck = () => {
               <Twitter className="h-8 w-8 text-primary" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">Connect Twitter to See Relevant Posts</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-2">Connect Twitter to Start Creating Content</h3>
               <p className="text-muted-foreground mb-4">
-                Connect your Twitter account to discover relevant posts based on your interests and topics.
+                Connect your Twitter account to generate content based on trending articles and industry insights tailored to your audience.
               </p>
               <Button 
                 onClick={() => window.location.href = '/dashboard?tab=connections'}

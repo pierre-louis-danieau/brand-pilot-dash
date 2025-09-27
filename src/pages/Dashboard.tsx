@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import DashboardNavigation from "@/components/DashboardNavigation";
 import RelevantPosts from "@/components/RelevantPosts";
 import DraftedPostsWithTwitterCheck from "@/components/DraftedPostsWithTwitterCheck";
+import AICreator from "@/components/AICreator";
 import TwitterConnection from "@/components/TwitterConnection";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
@@ -60,6 +61,8 @@ const Dashboard = () => {
             {activeTab === "relevant" && <RelevantPosts />}
             
             {activeTab === "drafted" && <DraftedPostsWithTwitterCheck />}
+            
+            {activeTab === "ai-creator" && <AICreator />}
             
             {activeTab === "connections" && (
               <div className="space-y-6">

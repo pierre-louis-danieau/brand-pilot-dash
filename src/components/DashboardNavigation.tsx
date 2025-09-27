@@ -294,17 +294,28 @@ const DashboardNavigation = ({ activeTab, setActiveTab, comingSoonPlatform, setC
                   variant={activeTab === "relevant" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setActiveTab("relevant")}
-                  className="px-6 py-2"
+                  className="px-6 py-2 flex flex-col items-center"
                 >
-                  📈 Relevant Posts
+                  <span>💬 Social Engagement</span>
+                  <span className="text-xs text-muted-foreground mt-0.5">Interact with trending posts</span>
                 </Button>
                 <Button
                   variant={activeTab === "drafted" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setActiveTab("drafted")}
-                  className="px-6 py-2"
+                  className="px-6 py-2 flex flex-col items-center"
                 >
-                  ✍️ Drafted Posts
+                  <span>📰 Content Studio</span>
+                  <span className="text-xs text-muted-foreground mt-0.5">Generate posts from articles</span>
+                </Button>
+                <Button
+                  variant={activeTab === "ai-creator" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setActiveTab("ai-creator")}
+                  className="px-6 py-2 flex flex-col items-center"
+                >
+                  <span>✨ AI Creator</span>
+                  <span className="text-xs text-muted-foreground mt-0.5">Create custom AI posts</span>
                 </Button>
               </div>
             </div>
@@ -315,9 +326,10 @@ const DashboardNavigation = ({ activeTab, setActiveTab, comingSoonPlatform, setC
                   variant={activeTab === "connections" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setActiveTab("connections")}
-                  className="px-6 py-2"
+                  className="px-6 py-2 flex flex-col items-center"
                 >
-                  🔗 Connections
+                  <span>🔗 Connections</span>
+                  <span className="text-xs text-muted-foreground mt-0.5">Manage social accounts</span>
                 </Button>
               </div>
             </div>

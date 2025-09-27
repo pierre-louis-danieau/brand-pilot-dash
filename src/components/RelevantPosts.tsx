@@ -254,8 +254,8 @@ const RelevantPosts = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Relevant Posts</h2>
-            <p className="text-muted-foreground">Posts from your topics of interest</p>
+            <h2 className="text-2xl font-bold text-foreground">Social Engagement</h2>
+            <p className="text-muted-foreground">Discover and interact with trending posts from your topics of interest</p>
           </div>
         </div>
         
@@ -265,9 +265,9 @@ const RelevantPosts = () => {
               <Twitter className="h-8 w-8 text-primary" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">Connect Twitter to See Relevant Posts</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-2">Connect Twitter to Start Engaging</h3>
               <p className="text-muted-foreground mb-4">
-                Connect your Twitter account to discover relevant posts based on your interests and topics.
+                Connect your Twitter account to discover trending posts in your industry and engage with your community through AI-powered responses.
               </p>
               <Button 
                 onClick={() => window.location.href = '/dashboard?tab=connections'}
@@ -287,8 +287,8 @@ const RelevantPosts = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Relevant Posts</h2>
-          <p className="text-muted-foreground">Your collection of relevant posts</p>
+          <h2 className="text-2xl font-bold text-foreground">Social Engagement</h2>
+          <p className="text-muted-foreground">Discover, engage, and build relationships through meaningful interactions</p>
         </div>
         <Button 
           onClick={fetchRelevantPost}

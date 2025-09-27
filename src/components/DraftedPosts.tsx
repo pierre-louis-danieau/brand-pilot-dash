@@ -220,8 +220,8 @@ const DraftedPosts = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Drafted Posts</h2>
-            <p className="text-muted-foreground">Loading your AI-generated content...</p>
+            <h2 className="text-2xl font-bold text-foreground">Content Studio</h2>
+            <p className="text-muted-foreground">Generating your AI-powered content...</p>
           </div>
         </div>
         <div className="text-center py-12">
@@ -236,8 +236,8 @@ const DraftedPosts = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Drafted Posts</h2>
-          <p className="text-muted-foreground">AI-generated content ready for review</p>
+          <h2 className="text-2xl font-bold text-foreground">Content Studio</h2>
+          <p className="text-muted-foreground">Transform trending articles into engaging posts with AI</p>
         </div>
         <Button 
           variant="default" 
