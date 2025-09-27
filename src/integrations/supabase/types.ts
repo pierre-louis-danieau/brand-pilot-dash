@@ -14,7 +14,121 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      posts: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          platform: string
+          profile_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          platform?: string
+          profile_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          platform?: string
+          profile_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          about_context: string | null
+          ai_voice: string | null
+          created_at: string
+          email: string
+          goal: string | null
+          id: string
+          industry_domain: string | null
+          post_preferences: string | null
+          topics_of_interest: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          about_context?: string | null
+          ai_voice?: string | null
+          created_at?: string
+          email: string
+          goal?: string | null
+          id?: string
+          industry_domain?: string | null
+          post_preferences?: string | null
+          topics_of_interest?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          about_context?: string | null
+          ai_voice?: string | null
+          created_at?: string
+          email?: string
+          goal?: string | null
+          id?: string
+          industry_domain?: string | null
+          post_preferences?: string | null
+          topics_of_interest?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      social_connections: {
+        Row: {
+          connection_data: Json | null
+          created_at: string
+          id: string
+          is_connected: boolean
+          platform: string
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          connection_data?: Json | null
+          created_at?: string
+          id?: string
+          is_connected?: boolean
+          platform: string
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          connection_data?: Json | null
+          created_at?: string
+          id?: string
+          is_connected?: boolean
+          platform?: string
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_connections_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
