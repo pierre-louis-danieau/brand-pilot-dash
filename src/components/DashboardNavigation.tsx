@@ -12,12 +12,11 @@ interface DashboardNavigationProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   comingSoonPlatform: string | null;
-  setComingSoonPlatform: (platform: string | null) => void;
+  activePlatform: string;
 }
 
-const DashboardNavigation = ({ activeTab, setActiveTab, comingSoonPlatform, setComingSoonPlatform }: DashboardNavigationProps) => {
+const DashboardNavigation = ({ activeTab, setActiveTab, comingSoonPlatform, activePlatform }: DashboardNavigationProps) => {
   const [showSettings, setShowSettings] = useState(false);
-  const [activePlatform, setActivePlatform] = useState("twitter");
   const [userContext, setUserContext] = useState("");
   const [postPreferences, setPostPreferences] = useState("");
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
@@ -224,65 +223,6 @@ const DashboardNavigation = ({ activeTab, setActiveTab, comingSoonPlatform, setC
           </div>
         </div>
       )}
-
-      {/* Platform Selection */}
-      <nav className="bg-card border-b border-border px-6 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button
-              variant={activePlatform === "twitter" ? "default" : "outline"}
-              size="sm"
-              onClick={() => {
-                setActivePlatform("twitter");
-                setComingSoonPlatform(null);
-              }}
-              className="flex items-center space-x-2"
-            >
-              <Twitter className="h-4 w-4" />
-              <span>Twitter</span>
-              <Badge variant="secondary" className="text-xs ml-1">Connected</Badge>
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setActivePlatform("linkedin");
-                setComingSoonPlatform("linkedin");
-                if (activeTab !== "connections") {
-                  setActiveTab("relevant");
-                }
-              }}
-              className="flex items-center space-x-2 relative"
-            >
-              <MessageCircle className="h-4 w-4" />
-              <span>LinkedIn</span>
-              <Badge variant="outline" className="text-xs ml-1 bg-yellow-100 text-yellow-800 border-yellow-300">
-                Soon
-              </Badge>
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setActivePlatform("reddit");
-                setComingSoonPlatform("reddit");
-                if (activeTab !== "connections") {
-                  setActiveTab("relevant");
-                }
-              }}
-              className="flex items-center space-x-2"
-            >
-              <MessageCircle className="h-4 w-4" />
-              <span>Reddit</span>
-              <Badge variant="outline" className="text-xs ml-1 bg-yellow-100 text-yellow-800 border-yellow-300">
-                Soon
-              </Badge>
-            </Button>
-          </div>
-        </div>
-      </nav>
 
       {/* Content Type Navigation - Only show when Twitter is active */}
       {activePlatform === "twitter" && !comingSoonPlatform && (

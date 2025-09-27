@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import DashboardNavigation from "@/components/DashboardNavigation";
+import SocialMediaSidebar from "@/components/SocialMediaSidebar";
 import RelevantPosts from "@/components/RelevantPosts";
 import DraftedPostsWithTwitterCheck from "@/components/DraftedPostsWithTwitterCheck";
 import AICreatorWithTwitterCheck from "@/components/AICreatorWithTwitterCheck";
@@ -10,6 +11,7 @@ import { toast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("drafted");
+  const [activePlatform, setActivePlatform] = useState("twitter");
   const [comingSoonPlatform, setComingSoonPlatform] = useState<string | null>(null);
   const { isAuthenticated, loading } = useProfile();
   const navigate = useNavigate();
@@ -62,48 +64,59 @@ const Dashboard = () => {
         activeTab={activeTab} 
         setActiveTab={setActiveTab}
         comingSoonPlatform={comingSoonPlatform}
-        setComingSoonPlatform={setComingSoonPlatform}
+        activePlatform={activePlatform}
       />
       
-      <main className="container mx-auto px-6 py-8">
-        {/* Only show content tabs when not on a coming soon platform */}
-        {!comingSoonPlatform && (
-          <>
-            {activeTab === "relevant" && <RelevantPosts />}
-            
-            {activeTab === "drafted" && <DraftedPostsWithTwitterCheck />}
-            
-            {activeTab === "ai-creator" && <AICreatorWithTwitterCheck />}
-            
-            {activeTab === "connections" && (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-foreground mb-2">Social Connections</h2>
-                  <p className="text-muted-foreground">Connect your social media accounts to enable posting and analytics.</p>
-                </div>
-                
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  <TwitterConnection />
-                </div>
-              </div>
-            )}
-          </>
-        )}
+      <div className="flex">
+        <SocialMediaSidebar
+          activePlatform={activePlatform}
+          setActivePlatform={setActivePlatform}
+          comingSoonPlatform={comingSoonPlatform}
+          setComingSoonPlatform={setComingSoonPlatform}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+        />
         
-        {/* Show connections tab even for coming soon platforms */}
-        {comingSoonPlatform && activeTab === "connections" && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">Social Connections</h2>
-              <p className="text-muted-foreground">Connect your social media accounts to enable posting and analytics.</p>
+        <main className="flex-1 px-6 py-8">
+          {/* Only show content tabs when not on a coming soon platform */}
+          {!comingSoonPlatform && (
+            <>
+              {activeTab === "relevant" && <RelevantPosts />}
+              
+              {activeTab === "drafted" && <DraftedPostsWithTwitterCheck />}
+              
+              {activeTab === "ai-creator" && <AICreatorWithTwitterCheck />}
+              
+              {activeTab === "connections" && (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-foreground mb-2">Social Connections</h2>
+                    <p className="text-muted-foreground">Connect your social media accounts to enable posting and analytics.</p>
+                  </div>
+                  
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    <TwitterConnection />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+          
+          {/* Show connections tab even for coming soon platforms */}
+          {comingSoonPlatform && activeTab === "connections" && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground mb-2">Social Connections</h2>
+                <p className="text-muted-foreground">Connect your social media accounts to enable posting and analytics.</p>
+              </div>
+              
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <TwitterConnection />
+              </div>
             </div>
-            
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <TwitterConnection />
-            </div>
-          </div>
-        )}
-      </main>
+          )}
+        </main>
+      </div>
     </div>
   );
 };
