@@ -4,41 +4,91 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import OnboardingProgress from "@/components/OnboardingProgress";
-import { ArrowLeft, ArrowRight, Zap, Twitter, Linkedin, Instagram, CheckCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { onboardingApi } from "@/integrations/supabase/api";
 
 const Onboarding = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
+    userType: "" as "freelancer" | "startup_founder" | "",
+    domain: "",
+    socialMediaGoal: "" as "find_clients" | "personal_branding" | "for_fund" | "",
+    businessDescription: "",
+    name: "",
+    username: "",
     email: "",
-    topics: [] as string[],
-    goal: "",
-    industry: "",
-    aiVoice: "",
   });
+  const [loading, setLoading] = useState(false);
 
   const totalSteps = 5;
 
-  const predefinedTopics = [
-    "AI & Technology", "Startups", "Marketing", "SaaS", "E-commerce",
-    "Finance", "Health & Wellness", "Education", "Real Estate", "Travel",
-    "Food & Cooking", "Fitness", "Photography", "Design", "Programming"
+  const freelancerDomains = [
+    "Data Scientist",
+    "Developer", 
+    "Designer",
+    "Copywriter"
+  ];
+
+  const startupDomains = [
+    "FinTech",
+    "HealthTech", 
+    "EdTech",
+    "E-commerce",
+    "AI/ML",
+    "SaaS",
+    "Mobile Apps"
   ];
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Complete onboarding
+      handleComplete();
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!formData.userType || !formData.domain || !formData.socialMediaGoal || 
+        !formData.businessDescription || !formData.name || !formData.email) {
+      toast({
+        title: "Please fill all required fields",
+        description: "All fields are required to complete the onboarding.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      await onboardingApi.createOnboardingProfile({
+        email: formData.email,
+        name: formData.name,
+        username: formData.username || undefined,
+        user_type: formData.userType,
+        domain: formData.domain,
+        social_media_goal: formData.socialMediaGoal,
+        business_description: formData.businessDescription,
+      });
+
       toast({
         title: "Welcome to BrandPilot!",
         description: "Your account has been set up successfully.",
       });
       navigate("/dashboard");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to complete onboarding. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,26 +98,19 @@ const Onboarding = () => {
     }
   };
 
-  const toggleTopic = (topic: string) => {
-    setFormData(prev => ({
-      ...prev,
-      topics: prev.topics.includes(topic)
-        ? prev.topics.filter(t => t !== topic)
-        : [...prev.topics, topic]
-    }));
-  };
 
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return formData.email.includes("@");
+        return formData.userType !== "";
       case 2:
-        return formData.topics.length > 0;
+        return formData.domain !== "";
       case 3:
-        return formData.goal !== "";
+        return formData.socialMediaGoal !== "";
       case 4:
+        return formData.businessDescription.trim() !== "";
       case 5:
-        return true; // Optional steps
+        return formData.name.trim() !== "" && formData.email.includes("@");
       default:
         return false;
     }
@@ -79,15 +122,167 @@ const Onboarding = () => {
         return (
           <div className="text-center space-y-6">
             <div className="space-y-3">
-              <h2 className="text-3xl font-bold text-foreground">Welcome to BrandPilot</h2>
+              <h2 className="text-3xl font-bold text-foreground">Welcome! Let's get started</h2>
               <p className="text-muted-foreground max-w-md mx-auto">
-                Let's get you started with growing your brand online. First, we need your email.
+                Tell us about yourself to personalize your experience.
+              </p>
+            </div>
+            
+            <RadioGroup
+              value={formData.userType}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, userType: value as any }))}
+              className="max-w-md mx-auto space-y-4"
+            >
+              <div className="flex items-center space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-all">
+                <RadioGroupItem value="freelancer" id="freelancer" />
+                <Label htmlFor="freelancer" className="flex-1 text-left cursor-pointer">
+                  <div className="font-medium text-foreground">I'm a Freelancer</div>
+                  <div className="text-sm text-muted-foreground">Independent professional offering services</div>
+                </Label>
+              </div>
+              
+              <div className="flex items-center space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-all">
+                <RadioGroupItem value="startup_founder" id="startup_founder" />
+                <Label htmlFor="startup_founder" className="flex-1 text-left cursor-pointer">
+                  <div className="font-medium text-foreground">I'm a Startup Founder</div>
+                  <div className="text-sm text-muted-foreground">Building and launching my own business</div>
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="text-center space-y-6">
+            <div className="space-y-3">
+              <h2 className="text-3xl font-bold text-foreground">What's your domain?</h2>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                {formData.userType === "freelancer" 
+                  ? "Choose your area of expertise as a freelancer." 
+                  : "Select the industry domain of your startup."}
+              </p>
+            </div>
+            
+            <RadioGroup
+              value={formData.domain}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, domain: value }))}
+              className="max-w-md mx-auto space-y-3"
+            >
+              {(formData.userType === "freelancer" ? freelancerDomains : startupDomains).map((domain) => (
+                <div key={domain} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-all">
+                  <RadioGroupItem value={domain} id={domain} />
+                  <Label htmlFor={domain} className="flex-1 text-left cursor-pointer font-medium">
+                    {domain}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="text-center space-y-6">
+            <div className="space-y-3">
+              <h2 className="text-3xl font-bold text-foreground">Why do you want to post on social media?</h2>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                Help us understand your main goal for social media presence.
+              </p>
+            </div>
+            
+            <RadioGroup
+              value={formData.socialMediaGoal}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, socialMediaGoal: value as any }))}
+              className="max-w-md mx-auto space-y-4"
+            >
+              <div className="flex items-center space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-all">
+                <RadioGroupItem value="find_clients" id="find_clients" />
+                <Label htmlFor="find_clients" className="flex-1 text-left cursor-pointer">
+                  <div className="font-medium text-foreground">Find Clients</div>
+                  <div className="text-sm text-muted-foreground">Attract new customers and business opportunities</div>
+                </Label>
+              </div>
+              
+              <div className="flex items-center space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-all">
+                <RadioGroupItem value="personal_branding" id="personal_branding" />
+                <Label htmlFor="personal_branding" className="flex-1 text-left cursor-pointer">
+                  <div className="font-medium text-foreground">Personal Branding</div>
+                  <div className="text-sm text-muted-foreground">Build authority and thought leadership</div>
+                </Label>
+              </div>
+              
+              <div className="flex items-center space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-all">
+                <RadioGroupItem value="for_fund" id="for_fund" />
+                <Label htmlFor="for_fund" className="flex-1 text-left cursor-pointer">
+                  <div className="font-medium text-foreground">For Fund</div>
+                  <div className="text-sm text-muted-foreground">Attract investors and funding opportunities</div>
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="text-center space-y-6">
+            <div className="space-y-3">
+              <h2 className="text-3xl font-bold text-foreground">Tell us about yourself and your business</h2>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                Share details about your expertise and business to help us create relevant content.
+              </p>
+            </div>
+            
+            <div className="space-y-4 max-w-lg mx-auto">
+              <div className="space-y-2">
+                <Label htmlFor="business_description" className="text-left block">Business Description *</Label>
+                <Textarea
+                  id="business_description"
+                  placeholder="Describe your business, services, expertise, and what makes you unique..."
+                  value={formData.businessDescription}
+                  onChange={(e) => setFormData(prev => ({ ...prev, businessDescription: e.target.value }))}
+                  className="min-h-[120px]"
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      case 5:
+        return (
+          <div className="text-center space-y-6">
+            <div className="space-y-3">
+              <h2 className="text-3xl font-bold text-foreground">Complete your profile</h2>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                Add your personal details to finalize your account setup.
               </p>
             </div>
             
             <div className="space-y-4 max-w-sm mx-auto">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-left block">Email Address</Label>
+                <Label htmlFor="name" className="text-left block">Full Name *</Label>
+                <Input
+                  id="name"
+                  placeholder="John Doe"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="h-12"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="username" className="text-left block">Username (Optional)</Label>
+                <Input
+                  id="username"
+                  placeholder="@johndoe"
+                  value={formData.username}
+                  onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
+                  className="h-12"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-left block">Email Address *</Label>
                 <Input
                   id="email"
                   type="email"
@@ -97,186 +292,6 @@ const Onboarding = () => {
                   className="h-12"
                 />
               </div>
-            </div>
-          </div>
-        );
-
-      case 2:
-        return (
-          <div className="text-center space-y-6">
-            <div className="space-y-3">
-              <h2 className="text-3xl font-bold text-foreground">What are your interests?</h2>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                Select topics you're passionate about. We'll find relevant content for you.
-              </p>
-            </div>
-            
-            <div className="flex flex-wrap gap-3 justify-center max-w-2xl mx-auto">
-              {predefinedTopics.map((topic) => (
-                <Badge
-                  key={topic}
-                  variant={formData.topics.includes(topic) ? "default" : "secondary"}
-                  className={`cursor-pointer px-4 py-2 text-sm transition-all duration-200 hover:scale-105 ${
-                    formData.topics.includes(topic) 
-                      ? "bg-primary text-white shadow-brand" 
-                      : "hover:bg-primary/10"
-                  }`}
-                  onClick={() => toggleTopic(topic)}
-                >
-                  {topic}
-                </Badge>
-              ))}
-            </div>
-            
-            {formData.topics.length > 0 && (
-              <p className="text-sm text-muted-foreground">
-                Selected {formData.topics.length} topic{formData.topics.length !== 1 ? 's' : ''}
-              </p>
-            )}
-          </div>
-        );
-
-      case 3:
-        return (
-          <div className="text-center space-y-6">
-            <div className="space-y-3">
-              <h2 className="text-3xl font-bold text-foreground">What's your goal?</h2>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                Help us understand what you want to achieve with your online presence.
-              </p>
-            </div>
-            
-            <RadioGroup
-              value={formData.goal}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, goal: value }))}
-              className="max-w-md mx-auto space-y-4"
-            >
-              <div className="flex items-center space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-all">
-                <RadioGroupItem value="personal" id="personal" />
-                <Label htmlFor="personal" className="flex-1 text-left cursor-pointer">
-                  <div className="font-medium text-foreground">Develop personal branding</div>
-                  <div className="text-sm text-muted-foreground">Build authority and thought leadership</div>
-                </Label>
-              </div>
-              
-              <div className="flex items-center space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-all">
-                <RadioGroupItem value="startup" id="startup" />
-                <Label htmlFor="startup" className="flex-1 text-left cursor-pointer">
-                  <div className="font-medium text-foreground">Promote my startup</div>
-                  <div className="text-sm text-muted-foreground">Increase brand awareness and customer acquisition</div>
-                </Label>
-              </div>
-            </RadioGroup>
-            
-            {formData.goal === "startup" && (
-              <div className="space-y-2 max-w-sm mx-auto">
-                <Label htmlFor="industry">Industry/Domain (Optional)</Label>
-                <Input
-                  id="industry"
-                  placeholder="e.g., FinTech, HealthTech, E-commerce"
-                  value={formData.industry}
-                  onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))}
-                />
-              </div>
-            )}
-          </div>
-        );
-
-      case 4:
-        return (
-          <div className="text-center space-y-6">
-            <div className="space-y-3">
-              <h2 className="text-3xl font-bold text-foreground">Choose your AI voice</h2>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                Select the tone for your AI-generated content. You can always edit posts later.
-              </p>
-            </div>
-            
-            <RadioGroup
-              value={formData.aiVoice}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, aiVoice: value }))}
-              className="max-w-md mx-auto space-y-4"
-            >
-              <div className="flex items-center space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-all">
-                <RadioGroupItem value="professional" id="professional" />
-                <Label htmlFor="professional" className="flex-1 text-left cursor-pointer">
-                  <div className="font-medium text-foreground">Professional</div>
-                  <div className="text-sm text-muted-foreground">Formal, authoritative, and business-focused</div>
-                </Label>
-              </div>
-              
-              <div className="flex items-center space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-all">
-                <RadioGroupItem value="friendly" id="friendly" />
-                <Label htmlFor="friendly" className="flex-1 text-left cursor-pointer">
-                  <div className="font-medium text-foreground">Friendly</div>
-                  <div className="text-sm text-muted-foreground">Approachable, warm, and conversational</div>
-                </Label>
-              </div>
-              
-              <div className="flex items-center space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-all">
-                <RadioGroupItem value="witty" id="witty" />
-                <Label htmlFor="witty" className="flex-1 text-left cursor-pointer">
-                  <div className="font-medium text-foreground">Witty</div>
-                  <div className="text-sm text-muted-foreground">Clever, engaging, and slightly humorous</div>
-                </Label>
-              </div>
-            </RadioGroup>
-            
-            <div className="flex justify-center">
-              <Button 
-                variant="ghost" 
-                onClick={handleNext}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Skip for now
-              </Button>
-            </div>
-          </div>
-        );
-
-      case 5:
-        return (
-          <div className="text-center space-y-6">
-            <div className="space-y-3">
-              <h2 className="text-3xl font-bold text-foreground">Connect your social accounts</h2>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                Connect your social media accounts to start growing your presence.
-              </p>
-            </div>
-            
-            <div className="space-y-4 max-w-sm mx-auto">
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full h-14 justify-start space-x-3 border-blue-200 hover:bg-blue-50 text-blue-600"
-                onClick={() => toast({ title: "Connected to X (Twitter)!", description: "You can now manage your Twitter presence." })}
-              >
-                <Twitter className="h-5 w-5" />
-                <span>Connect to X (Twitter)</span>
-                <CheckCircle className="h-4 w-4 ml-auto text-green-600" />
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full h-14 justify-start space-x-3 opacity-60 cursor-not-allowed"
-                disabled
-              >
-                <Linkedin className="h-5 w-5" />
-                <span>LinkedIn</span>
-                <Badge variant="secondary" className="ml-auto text-xs">Coming Soon</Badge>
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full h-14 justify-start space-x-3 opacity-60 cursor-not-allowed"
-                disabled
-              >
-                <Instagram className="h-5 w-5" />
-                <span>Instagram</span>
-                <Badge variant="secondary" className="ml-auto text-xs">Coming Soon</Badge>
-              </Button>
             </div>
           </div>
         );
@@ -321,10 +336,10 @@ const Onboarding = () => {
               <Button
                 variant="default"
                 onClick={handleNext}
-                disabled={!canProceed()}
+                disabled={!canProceed() || loading}
                 className="flex items-center space-x-2"
               >
-                <span>{currentStep === totalSteps ? "Complete Setup" : "Next"}</span>
+                <span>{loading ? "Creating Profile..." : currentStep === totalSteps ? "Complete Setup" : "Next"}</span>
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </div>

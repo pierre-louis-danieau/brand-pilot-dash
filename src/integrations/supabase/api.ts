@@ -588,3 +588,36 @@ export const relevantPostsApi = {
     return data;
   },
 };
+
+// Onboarding API functions
+export const onboardingApi = {
+  createOnboardingProfile: async (profileData: {
+    email: string;
+    name: string;
+    username?: string;
+    user_type: 'freelancer' | 'startup_founder';
+    domain: string;
+    social_media_goal: 'find_clients' | 'personal_branding' | 'for_fund';
+    business_description: string;
+  }) => {
+    const { data, error } = await supabase
+      .from('onboarding_profiles' as any)
+      .insert(profileData)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+  
+  getOnboardingProfileByEmail: async (email: string) => {
+    const { data, error } = await supabase
+      .from('onboarding_profiles' as any)
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+    
+    if (error) throw error;
+    return data;
+  },
+};

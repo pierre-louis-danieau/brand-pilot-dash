@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      onboarding_profiles: {
+        Row: {
+          business_description: string
+          created_at: string
+          domain: string
+          email: string
+          id: string
+          name: string
+          social_media_goal: string
+          updated_at: string
+          user_type: string
+          username: string | null
+        }
+        Insert: {
+          business_description: string
+          created_at?: string
+          domain: string
+          email: string
+          id?: string
+          name: string
+          social_media_goal: string
+          updated_at?: string
+          user_type: string
+          username?: string | null
+        }
+        Update: {
+          business_description?: string
+          created_at?: string
+          domain?: string
+          email?: string
+          id?: string
+          name?: string
+          social_media_goal?: string
+          updated_at?: string
+          user_type?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           content: string
@@ -90,6 +129,77 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      relevant_posts: {
+        Row: {
+          ai_response: string | null
+          author_id: string
+          author_name: string
+          author_username: string
+          content: string
+          context_annotations: Json | null
+          created_at: string | null
+          created_at_twitter: string
+          id: string
+          like_count: number | null
+          profile_id: string
+          quote_count: number | null
+          reply_count: number | null
+          retweet_count: number | null
+          topic: string | null
+          twitter_post_id: string
+          twitter_url: string
+          updated_at: string | null
+        }
+        Insert: {
+          ai_response?: string | null
+          author_id: string
+          author_name: string
+          author_username: string
+          content: string
+          context_annotations?: Json | null
+          created_at?: string | null
+          created_at_twitter: string
+          id?: string
+          like_count?: number | null
+          profile_id: string
+          quote_count?: number | null
+          reply_count?: number | null
+          retweet_count?: number | null
+          topic?: string | null
+          twitter_post_id: string
+          twitter_url: string
+          updated_at?: string | null
+        }
+        Update: {
+          ai_response?: string | null
+          author_id?: string
+          author_name?: string
+          author_username?: string
+          content?: string
+          context_annotations?: Json | null
+          created_at?: string | null
+          created_at_twitter?: string
+          id?: string
+          like_count?: number | null
+          profile_id?: string
+          quote_count?: number | null
+          reply_count?: number | null
+          retweet_count?: number | null
+          topic?: string | null
+          twitter_post_id?: string
+          twitter_url?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relevant_posts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       social_connections: {
         Row: {
