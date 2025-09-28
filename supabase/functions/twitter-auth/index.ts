@@ -145,6 +145,18 @@ Deno.serve(async (req) => {
       const clientSecret = Deno.env.get('TWITTER_CLIENT_SECRET') || '';
       const basicAuth = btoa(`${clientId}:${clientSecret}`);
       
+      // Diagnostic logs to verify token exchange parameters
+      try {
+        const safeClientId = clientId ? `${clientId.substring(0, 6)}...${clientId.substring(clientId.length - 6)}` : '(empty)';
+        console.log('OAuth token exchange params:', {
+          client_id: safeClientId,
+          redirect_uri: redirectUri,
+          has_code_verifier: !!authData?.code_verifier,
+        });
+      } catch (_) {
+        // no-op logging guard
+      }
+
       const tokenResponse = await fetch(TWITTER_TOKEN_URL, {
         method: 'POST',
         headers: {
@@ -161,7 +173,16 @@ Deno.serve(async (req) => {
 
       if (!tokenResponse.ok) {
         const errorText = await tokenResponse.text();
-        console.error('Twitter token error:', errorText);
+        try {
+          const safeClientId = clientId ? `${clientId.substring(0, 6)}...${clientId.substring(clientId.length - 6)}` : '(empty)';
+          console.error('Twitter token exchange failed. Diagnostics:', {
+            status: tokenResponse.status,
+            headers: Object.fromEntries(tokenResponse.headers.entries()),
+            client_id: safeClientId,
+            redirect_uri: redirectUri,
+          });
+        } catch (_) {}
+        console.error('Twitter token error body:', errorText);
         throw new Error(`Failed to exchange code for token: ${errorText}`);
       }
 
@@ -175,7 +196,24 @@ Deno.serve(async (req) => {
       });
 
       if (!userResponse.ok) {
-        throw new Error('Failed to fetch user info from Twitter');
+        const raw = await userResponse.text();
+        console.error('Twitter /2/users/me error status:', userResponse.status);
+        console.error('Twitter /2/users/me response headers:', Object.fromEntries(userResponse.headers.entries()));
+        console.error('Twitter /2/users/me body:', raw);
+
+        // Common cause: missing users.read scope or invalid/expired token
+        if (userResponse.status === 401 || userResponse.status === 403) {
+          return new Response(JSON.stringify({
+            error: 'twitter_userinfo_failed',
+            message: 'Failed to fetch user info from Twitter. Ensure your app has OAuth 2.0 enabled with users.read scope and the token is valid.',
+            detail: raw
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        throw new Error(`Failed to fetch user info from Twitter: ${raw}`);
       }
 
       const userData = await userResponse.json();
